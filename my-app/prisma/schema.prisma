@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Merchant {
+  id            String   @id @default(cuid())
+  businessName  String
+  ownerName     String   // From Google account
+  email         String   @unique // From Google account
+  phone         String
+  contactPerson String?  // Contact person name for venue
+  venueType     String
+  capacity      Int
+  provinsi      String
+  kabupaten     String
+  kecamatan     String?
+  kelurahan     String?
+  alamatLengkap String
+  kodePos       String?
+  latitude      Float?
+  longitude     Float?
+  openingHour   String?  // e.g. "09:00"
+  closingHour   String?  // e.g. "22:00"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  license       License?
+}
+
+model License {
+  id          String    @id @default(cuid())
+  venue       Merchant  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venueId     String    @unique
+  tier        Int       // 1, 2, 3, 4, or 5
+  price       Int       // amount in IDR
+  status      String    @default("unpaid") // "unpaid", "paid"
+  paidAt      DateTime?
+  midtransId  String?   // order_id from Midtrans
+  createdAt   DateTime  @default(now())
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String?
+  image          String?
+  phone          String?
+  billingAddress String?
+  companyName    String?
+  companyRole    String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}

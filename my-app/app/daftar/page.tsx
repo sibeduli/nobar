@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,8 @@ import {
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
 export default function DaftarPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     businessName: '',
     ownerName: '',
@@ -34,7 +38,20 @@ export default function DaftarPage() {
     longitude: 0,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [useMap, setUseMap] = useState(false);
+
+  useEffect(() => {
+    if (status !== 'loading' && !session) {
+      router.push('/login');
+    }
+  }, [session, status, router]);
+
+  if (status === 'loading' || !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Memuat...</p>
+      </div>
+    );
+  }
 
   const handleLocationSelect = (lat: number, lng: number, addressData: {
     alamatLengkap: string;
@@ -69,13 +86,58 @@ export default function DaftarPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    console.log('Submit:', formData);
-    setTimeout(() => setIsSubmitting(false), 1000);
+    
+    try {
+      const res = await fetch('/api/merchants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        alert('Pendaftaran berhasil! Kami akan menghubungi Anda segera.');
+        setFormData({
+          businessName: '',
+          ownerName: '',
+          email: '',
+          phone: '',
+          venueType: '',
+          capacity: '',
+          provinsi: '',
+          kabupaten: '',
+          kecamatan: '',
+          kelurahan: '',
+          alamatLengkap: '',
+          kodePos: '',
+          latitude: 0,
+          longitude: 0,
+        });
+      } else {
+        alert(data.error || 'Gagal mendaftar. Silakan coba lagi.');
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert('Terjadi kesalahan. Silakan coba lagi.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-8 px-4">
       <div className="max-w-2xl mx-auto">
+        {/* Auth Header */}
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-700">{session.user?.name}</span>
+            <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: '/login' })}>
+              Keluar
+            </Button>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
@@ -133,7 +195,7 @@ export default function DaftarPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Nomor Telepon</Label>
+                  <Label htmlFor="phone">Nomor Telepon (Whatsapp Aktif)</Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -192,33 +254,18 @@ export default function DaftarPage() {
           {/* Section 3: Alamat */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Alamat Venue</CardTitle>
-                  <CardDescription>Lokasi lengkap tempat usaha</CardDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant={useMap ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setUseMap(!useMap)}
-                >
-                  {useMap ? '📍 Peta Aktif' : '🗺️ Pilih di Peta'}
-                </Button>
-              </div>
+              <CardTitle className="text-lg">Alamat Venue</CardTitle>
+              <CardDescription>Cari atau klik pada peta untuk memilih lokasi</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {useMap && (
-                <div className="space-y-2">
-                  <Label>Klik pada peta untuk memilih lokasi</Label>
-                  <MapPicker onLocationSelect={handleLocationSelect} />
-                  {formData.latitude !== 0 && (
-                    <p className="text-sm text-green-600">
-                      ✓ Lokasi dipilih: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-                    </p>
-                  )}
-                </div>
-              )}
+              <div className="space-y-2">
+                <MapPicker onLocationSelect={handleLocationSelect} />
+                {formData.latitude !== 0 && (
+                  <p className="text-sm text-green-600">
+                    ✓ Lokasi dipilih: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+                  </p>
+                )}
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="provinsi">Provinsi</Label>

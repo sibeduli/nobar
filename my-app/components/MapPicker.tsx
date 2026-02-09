@@ -1,19 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-
-const markerIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+import { useState, useCallback, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
 
 interface AddressData {
   alamatLengkap: string;
@@ -30,161 +18,58 @@ interface MapPickerProps {
   initialLng?: number;
 }
 
-function LocationMarker({ 
-  position, 
-  setPosition,
-  onLocationSelect 
-}: { 
-  position: [number, number] | null;
-  setPosition: (pos: [number, number]) => void;
-  onLocationSelect: (lat: number, lng: number, addressData: AddressData) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      const { lat, lng } = e.latlng;
-      setPosition([lat, lng]);
-      
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=id&addressdetails=1`)
-        .then(res => res.json())
-        .then(data => {
-          const addr = data.address || {};
-          const addressData: AddressData = {
-            alamatLengkap: [
-              addr.road,
-              addr.house_number,
-              addr.neighbourhood,
-            ].filter(Boolean).join(' ') || data.display_name || '',
-            kelurahan: addr.village || addr.suburb || addr.neighbourhood || '',
-            kecamatan: addr.subdistrict || addr.district || '',
-            kabupaten: addr.city || addr.county || addr.regency || addr.municipality || '',
-            provinsi: addr.state || addr.province || '',
-            kodePos: addr.postcode || '',
-          };
-          onLocationSelect(lat, lng, addressData);
-        })
-        .catch(() => {
-          onLocationSelect(lat, lng, {
-            alamatLengkap: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-            kelurahan: '',
-            kecamatan: '',
-            kabupaten: '',
-            provinsi: '',
-            kodePos: '',
-          });
-        });
-    },
-  });
+const libraries: ("places")[] = ["places"];
 
-  return position ? <Marker position={position} icon={markerIcon} /> : null;
-}
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%',
+};
 
-interface SearchResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-function SearchControl({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
-  const map = useMap();
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
-
-  const handleSearch = (value: string) => {
-    setQuery(value);
-    
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    
-    if (value.length < 3) {
-      setResults([]);
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => {
-      setIsSearching(true);
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&countrycodes=id&limit=5&accept-language=id`)
-        .then(res => res.json())
-        .then(data => {
-          setResults(data);
-          setIsSearching(false);
-        })
-        .catch(() => {
-          setResults([]);
-          setIsSearching(false);
-        });
-    }, 300);
+function parseAddressComponents(components: google.maps.GeocoderAddressComponent[]): AddressData {
+  const get = (type: string) => components.find(c => c.types.includes(type))?.long_name || '';
+  
+  return {
+    alamatLengkap: [
+      get('route'),
+      get('street_number'),
+    ].filter(Boolean).join(' '),
+    kelurahan: get('administrative_area_level_4') || get('sublocality_level_1') || get('sublocality'),
+    kecamatan: get('administrative_area_level_3') || get('sublocality_level_2'),
+    kabupaten: get('administrative_area_level_2') || get('locality'),
+    provinsi: get('administrative_area_level_1'),
+    kodePos: get('postal_code'),
   };
-
-  const selectResult = (result: SearchResult) => {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    map.flyTo([lat, lng], 17);
-    onSelect(lat, lng);
-    setQuery(result.display_name);
-    setResults([]);
-  };
-
-  return (
-    <div className="absolute top-2 left-2 right-2 z-[1000]">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => handleSearch(e.target.value)}
-        placeholder="Cari nama cafe, restoran, atau alamat..."
-        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-      {isSearching && (
-        <div className="mt-1 p-2 bg-white rounded-lg shadow text-sm text-gray-500">
-          Mencari...
-        </div>
-      )}
-      {results.length > 0 && (
-        <ul className="mt-1 bg-white rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {results.map((result, i) => (
-            <li
-              key={i}
-              onClick={() => selectResult(result)}
-              className="px-3 py-2 text-sm text-gray-900 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0"
-            >
-              {result.display_name}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
 }
 
 export default function MapPicker({ onLocationSelect, initialLat = -6.2088, initialLng = 106.8456 }: MapPickerProps) {
-  const [position, setPosition] = useState<[number, number] | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+    libraries,
+  });
 
-  useEffect(() => {
-    setIsClient(true);
+  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(null);
+  const [mapCenter, setMapCenter] = useState({ lat: initialLat, lng: initialLng });
+  const [zoom, setZoom] = useState(13);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+  const onLoad = useCallback(() => {
+    // Map loaded
   }, []);
 
-  const handleSearchSelect = (lat: number, lng: number) => {
-    setPosition([lat, lng]);
-    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=id&addressdetails=1`)
-      .then(res => res.json())
-      .then(data => {
-        const addr = data.address || {};
-        const addressData: AddressData = {
-          alamatLengkap: [
-            addr.road,
-            addr.house_number,
-            addr.neighbourhood,
-          ].filter(Boolean).join(' ') || data.display_name || '',
-          kelurahan: addr.village || addr.suburb || addr.neighbourhood || '',
-          kecamatan: addr.subdistrict || addr.district || '',
-          kabupaten: addr.city || addr.county || addr.regency || addr.municipality || '',
-          provinsi: addr.state || addr.province || '',
-          kodePos: addr.postcode || '',
-        };
+  const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (!e.latLng) return;
+    
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    setMarker({ lat, lng });
+
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === 'OK' && results && results[0]) {
+        const addressData = parseAddressComponents(results[0].address_components);
+        addressData.alamatLengkap = addressData.alamatLengkap || results[0].formatted_address;
         onLocationSelect(lat, lng, addressData);
-      })
-      .catch(() => {
+      } else {
         onLocationSelect(lat, lng, {
           alamatLengkap: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
           kelurahan: '',
@@ -193,10 +78,42 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
           provinsi: '',
           kodePos: '',
         });
-      });
+      }
+    });
+  }, [onLocationSelect]);
+
+  const onAutocompleteLoad = (autocomplete: google.maps.places.Autocomplete) => {
+    autocompleteRef.current = autocomplete;
   };
 
-  if (!isClient) {
+  const onPlaceChanged = () => {
+    const place = autocompleteRef.current?.getPlace();
+    if (!place?.geometry?.location) return;
+
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+    
+    const newPos = { lat, lng };
+    setMarker(newPos);
+    setMapCenter(newPos);
+    setZoom(17);
+
+    if (place.address_components) {
+      const addressData = parseAddressComponents(place.address_components);
+      addressData.alamatLengkap = addressData.alamatLengkap || place.formatted_address || '';
+      onLocationSelect(lat, lng, addressData);
+    }
+  };
+
+  if (loadError) {
+    return (
+      <div className="w-full h-72 bg-red-50 rounded-lg flex items-center justify-center">
+        <p className="text-red-500">Gagal memuat peta</p>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
     return (
       <div className="w-full h-72 bg-gray-100 rounded-lg flex items-center justify-center">
         <p className="text-gray-500">Memuat peta...</p>
@@ -206,22 +123,36 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
 
   return (
     <div className="w-full h-72 rounded-lg overflow-hidden border border-gray-200 relative">
-      <MapContainer
-        center={[initialLat, initialLng]}
-        zoom={13}
-        style={{ height: '100%', width: '100%' }}
+      <div className="absolute top-2 left-2 right-2 z-10">
+        <Autocomplete
+          onLoad={onAutocompleteLoad}
+          onPlaceChanged={onPlaceChanged}
+          options={{
+            componentRestrictions: { country: 'id' },
+            types: ['establishment', 'geocode'],
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Cari nama cafe, restoran, atau alamat..."
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </Autocomplete>
+      </div>
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={mapCenter}
+        zoom={zoom}
+        onLoad={onLoad}
+        onClick={onMapClick}
+        options={{
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+        }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <SearchControl onSelect={handleSearchSelect} />
-        <LocationMarker 
-          position={position} 
-          setPosition={setPosition}
-          onLocationSelect={onLocationSelect}
-        />
-      </MapContainer>
+        {marker && <Marker position={marker} />}
+      </GoogleMap>
     </div>
   );
 }
