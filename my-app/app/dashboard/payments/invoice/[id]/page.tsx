@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CheckCircle, Clock, CreditCard, Building2, Printer } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, CreditCard, Building2, Download } from 'lucide-react';
 import Link from 'next/link';
 
 interface License {
@@ -146,8 +146,31 @@ export default function InvoicePage() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!license) return;
+    
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/licenses/${license.id}/invoice`);
+      if (!response.ok) throw new Error('Failed to download invoice');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice-${license.midtransId || license.id.slice(-8).toUpperCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      alert('Gagal mengunduh invoice. Silakan coba lagi.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (isLoading) {
@@ -178,11 +201,11 @@ export default function InvoicePage() {
         Kembali ke Pembayaran
       </Link>
 
-      <div className="flex items-center justify-between mb-6 print:hidden">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Invoice</h1>
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer className="w-4 h-4 mr-2" />
-          Cetak
+        <Button variant="outline" onClick={handleDownload} disabled={isDownloading}>
+          <Download className="w-4 h-4 mr-2" />
+          {isDownloading ? 'Mengunduh...' : 'Unduh PDF'}
         </Button>
       </div>
 
