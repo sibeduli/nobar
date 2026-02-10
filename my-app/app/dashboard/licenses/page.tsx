@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Store, CreditCard, CheckCircle, Users } from 'lucide-react';
+import { FileText, Store, CreditCard, CheckCircle, Users, QrCode } from 'lucide-react';
 import Link from 'next/link';
 
 interface License {
@@ -146,6 +146,12 @@ export default function LicensesPage() {
                         </p>
                       </div>
                     </div>
+                    <Link href={`/dashboard/licenses/${venue.license?.id}/qr`}>
+                      <Button variant="outline" size="sm">
+                        <QrCode className="w-4 h-4 mr-2" />
+                        Lihat QR
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

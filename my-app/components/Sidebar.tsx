@@ -21,6 +21,7 @@ import {
   X,
   ChevronDown,
   LogOut,
+  QrCode,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -49,6 +50,11 @@ const menuItems: MenuItem[] = [
     label: 'Lisensi',
     href: '/dashboard/licenses',
     icon: <FileText className="w-5 h-5" />,
+  },
+  {
+    label: 'Scan QR',
+    href: '/dashboard/scan',
+    icon: <QrCode className="w-5 h-5" />,
   },
   {
     label: 'Pembayaran',

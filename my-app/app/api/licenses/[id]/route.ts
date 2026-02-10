@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 // Get single license by ID
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
 
     const license = await prisma.license.findUnique({
       where: { id },
@@ -16,9 +18,11 @@ export async function GET(
           select: {
             id: true,
             businessName: true,
+            venueType: true,
             ownerName: true,
             email: true,
             phone: true,
+            contactPerson: true,
             alamatLengkap: true,
             kabupaten: true,
             provinsi: true,
@@ -34,7 +38,16 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ success: true, license });
+    // Check if the current user owns this license
+    const isOwner = session?.user?.email === license.venue.email;
+
+    return NextResponse.json({ 
+      success: true, 
+      license: {
+        ...license,
+        isOwner,
+      }
+    });
   } catch (error) {
     console.error('Error fetching license:', error);
     return NextResponse.json(
