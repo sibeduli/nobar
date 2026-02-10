@@ -53,6 +53,14 @@ const venueTypeLabels: Record<string, string> = {
   other: 'Lainnya',
 };
 
+const capacityTierLabels: Record<number, string> = {
+  1: '≤50 orang',
+  2: '51-100 orang',
+  3: '101-250 orang',
+  4: '251-500 orang',
+  5: '501-1000 orang',
+};
+
 const getLicenseBadge = (license: License | null) => {
   if (!license) {
     return { label: 'Belum Berlisensi', variant: 'outline' as const };
@@ -203,7 +211,7 @@ export default function VenuesPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Users className="w-4 h-4" />
-                          {venue.capacity} orang
+                          {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
                         </span>
                       </div>
                     </div>

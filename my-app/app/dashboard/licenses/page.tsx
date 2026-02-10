@@ -26,19 +26,23 @@ interface Venue {
 }
 
 const LICENSE_TIERS = [
-  { tier: 1, maxCapacity: 50, price: 5000000, label: 'Tier 1 (≤50 orang)' },
-  { tier: 2, maxCapacity: 100, price: 10000000, label: 'Tier 2 (51-100 orang)' },
-  { tier: 3, maxCapacity: 250, price: 20000000, label: 'Tier 3 (101-250 orang)' },
-  { tier: 4, maxCapacity: 500, price: 40000000, label: 'Tier 4 (251-500 orang)' },
-  { tier: 5, maxCapacity: 1000, price: 100000000, label: 'Tier 5 (501-1000 orang)' },
+  { tier: 1, price: 5000000, label: 'Tier 1', description: '≤50 orang' },
+  { tier: 2, price: 10000000, label: 'Tier 2', description: '51-100 orang' },
+  { tier: 3, price: 20000000, label: 'Tier 3', description: '101-250 orang' },
+  { tier: 4, price: 40000000, label: 'Tier 4', description: '251-500 orang' },
+  { tier: 5, price: 100000000, label: 'Tier 5', description: '501-1000 orang' },
 ];
 
-const getTierByCapacity = (capacity: number) => {
-  if (capacity <= 50) return LICENSE_TIERS[0];
-  if (capacity <= 100) return LICENSE_TIERS[1];
-  if (capacity <= 250) return LICENSE_TIERS[2];
-  if (capacity <= 500) return LICENSE_TIERS[3];
-  return LICENSE_TIERS[4];
+const getTierByValue = (tier: number) => {
+  return LICENSE_TIERS.find(t => t.tier === tier) || LICENSE_TIERS[0];
+};
+
+const capacityTierLabels: Record<number, string> = {
+  1: '≤50 orang',
+  2: '51-100 orang',
+  3: '101-250 orang',
+  4: '251-500 orang',
+  5: '501-1000 orang',
 };
 
 const formatPrice = (price: number) => {
@@ -147,7 +151,7 @@ export default function LicensesPage() {
           <h2 className="text-lg font-semibold text-gray-900">Venue Belum Berlisensi</h2>
           <div className="grid gap-4">
             {unlicensedVenues.map((venue) => {
-              const suggestedTier = getTierByCapacity(venue.capacity);
+              const venueTier = getTierByValue(venue.capacity);
               return (
                 <Card key={venue.id}>
                   <CardContent className="p-6">
@@ -164,14 +168,14 @@ export default function LicensesPage() {
                             )}
                           </div>
                           <p className="text-sm text-gray-500">
-                            {venueTypeLabels[venue.venueType] || venue.venueType} • {venue.capacity} orang
+                            {venueTypeLabels[venue.venueType] || venue.venueType} • {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
                           </p>
                           <p className="text-sm text-blue-600">
-                            Disarankan: {suggestedTier.label} - {formatPrice(suggestedTier.price)}
+                            {venueTier.label} ({venueTier.description}) - {formatPrice(venueTier.price)}
                           </p>
                         </div>
                       </div>
-                      <Link href={`/dashboard/licenses/pay?venueId=${venue.id}&tier=${suggestedTier.tier}`}>
+                      <Link href={`/dashboard/licenses/pay?venueId=${venue.id}&tier=${venueTier.tier}`}>
                         <Button>
                           <CreditCard className="w-4 h-4 mr-2" />
                           Beli Lisensi

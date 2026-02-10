@@ -19,6 +19,14 @@ import Link from 'next/link';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
+const CAPACITY_TIERS = [
+  { tier: 1, label: '≤50 orang', price: 5000000, priceLabel: 'Rp 5.000.000' },
+  { tier: 2, label: '51-100 orang', price: 10000000, priceLabel: 'Rp 10.000.000' },
+  { tier: 3, label: '101-250 orang', price: 20000000, priceLabel: 'Rp 20.000.000' },
+  { tier: 4, label: '251-500 orang', price: 40000000, priceLabel: 'Rp 40.000.000' },
+  { tier: 5, label: '501-1000 orang', price: 100000000, priceLabel: 'Rp 100.000.000' },
+];
+
 export default function EditVenuePage() {
   const router = useRouter();
   const params = useParams();
@@ -238,15 +246,24 @@ export default function EditVenuePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacity">Kapasitas Pengunjung</Label>
-                <Input
-                  id="capacity"
-                  name="capacity"
-                  type="number"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  placeholder="Jumlah maksimal"
-                  required
-                />
+                <Select 
+                  value={formData.capacity} 
+                  onValueChange={(v) => handleSelectChange('capacity', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kapasitas venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CAPACITY_TIERS.map((tier) => (
+                      <SelectItem key={tier.tier} value={tier.tier.toString()}>
+                        <span className="flex justify-between items-center gap-4">
+                          <span>{tier.label}</span>
+                          <span className="text-gray-500">({tier.priceLabel})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

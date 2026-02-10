@@ -27,20 +27,16 @@ import Link from 'next/link';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
-const LICENSE_TIERS = [
-  { tier: 1, maxCapacity: 50, price: 5000000, label: 'Tier 1 (≤50 orang)' },
-  { tier: 2, maxCapacity: 100, price: 10000000, label: 'Tier 2 (51-100 orang)' },
-  { tier: 3, maxCapacity: 250, price: 20000000, label: 'Tier 3 (101-250 orang)' },
-  { tier: 4, maxCapacity: 500, price: 40000000, label: 'Tier 4 (251-500 orang)' },
-  { tier: 5, maxCapacity: 1000, price: 100000000, label: 'Tier 5 (501-1000 orang)' },
+const CAPACITY_TIERS = [
+  { tier: 1, label: '≤50 orang', price: 5000000, priceLabel: 'Rp 5.000.000' },
+  { tier: 2, label: '51-100 orang', price: 10000000, priceLabel: 'Rp 10.000.000' },
+  { tier: 3, label: '101-250 orang', price: 20000000, priceLabel: 'Rp 20.000.000' },
+  { tier: 4, label: '251-500 orang', price: 40000000, priceLabel: 'Rp 40.000.000' },
+  { tier: 5, label: '501-1000 orang', price: 100000000, priceLabel: 'Rp 100.000.000' },
 ];
 
-const getTierByCapacity = (capacity: number) => {
-  if (capacity <= 50) return LICENSE_TIERS[0];
-  if (capacity <= 100) return LICENSE_TIERS[1];
-  if (capacity <= 250) return LICENSE_TIERS[2];
-  if (capacity <= 500) return LICENSE_TIERS[3];
-  return LICENSE_TIERS[4];
+const getTierByValue = (tier: number) => {
+  return CAPACITY_TIERS.find(t => t.tier === tier) || CAPACITY_TIERS[0];
 };
 
 const formatPrice = (price: number) => {
@@ -74,7 +70,7 @@ export default function DaftarVenuePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [registeredVenueId, setRegisteredVenueId] = useState<string | null>(null);
-  const [registeredCapacity, setRegisteredCapacity] = useState<number>(0);
+  const [selectedTier, setSelectedTier] = useState<number>(0);
 
   const handleLocationSelect = (lat: number, lng: number, addressData: {
     alamatLengkap: string;
@@ -128,7 +124,7 @@ export default function DaftarVenuePage() {
       
       if (data.success) {
         setRegisteredVenueId(data.merchant.id);
-        setRegisteredCapacity(parseInt(formData.capacity) || 0);
+        setSelectedTier(parseInt(formData.capacity) || 1);
         setShowPaymentModal(true);
       } else {
         alert(data.error || 'Gagal mendaftar. Silakan coba lagi.');
@@ -142,9 +138,8 @@ export default function DaftarVenuePage() {
   };
 
   const handlePayNow = () => {
-    if (registeredVenueId) {
-      const tier = getTierByCapacity(registeredCapacity);
-      router.push(`/dashboard/licenses/pay?venueId=${registeredVenueId}&tier=${tier.tier}`);
+    if (registeredVenueId && selectedTier) {
+      router.push(`/dashboard/licenses/pay?venueId=${registeredVenueId}&tier=${selectedTier}`);
     }
   };
 
@@ -244,15 +239,24 @@ export default function DaftarVenuePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="capacity">Kapasitas Pengunjung</Label>
-                <Input
-                  id="capacity"
-                  name="capacity"
-                  type="number"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  placeholder="Jumlah maksimal"
-                  required
-                />
+                <Select 
+                  value={formData.capacity} 
+                  onValueChange={(v) => handleSelectChange('capacity', v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kapasitas venue" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CAPACITY_TIERS.map((tier) => (
+                      <SelectItem key={tier.tier} value={tier.tier.toString()}>
+                        <span className="flex justify-between items-center gap-4">
+                          <span>{tier.label}</span>
+                          <span className="text-gray-500">({tier.priceLabel})</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -391,13 +395,13 @@ export default function DaftarVenuePage() {
           <div className="py-4">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Lisensi yang disarankan:</strong>
+                <strong>Lisensi Anda:</strong>
               </p>
               <p className="text-lg font-bold text-blue-900">
-                {getTierByCapacity(registeredCapacity).label}
+                Tier {selectedTier} ({getTierByValue(selectedTier).label})
               </p>
               <p className="text-2xl font-bold text-blue-600">
-                {formatPrice(getTierByCapacity(registeredCapacity).price)}
+                {formatPrice(getTierByValue(selectedTier).price)}
               </p>
               <p className="text-xs text-blue-600 mt-1">
                 Berlaku untuk seluruh event Piala Dunia 2026

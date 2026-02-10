@@ -122,6 +122,10 @@ export default function LicensePayPage() {
       const data = await res.json();
       if (data.success) {
         setVenue(data.merchant);
+        // Use venue's capacity (which is now the tier number) as the selected tier
+        if (data.merchant.capacity) {
+          setSelectedTier(data.merchant.capacity);
+        }
       } else {
         router.push('/dashboard/licenses');
       }
@@ -318,7 +322,7 @@ export default function LicensePayPage() {
               <div>
                 <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
                 <p className="text-sm text-gray-500">
-                  Kapasitas: {venue.capacity} orang • {venue.kabupaten}, {venue.provinsi}
+                  Kapasitas: {selectedTierData?.description || `Tier ${venue.capacity}`} • {venue.kabupaten}, {venue.provinsi}
                 </p>
               </div>
             </div>
@@ -343,37 +347,28 @@ export default function LicensePayPage() {
         </CardContent>
       </Card>
 
-      {/* Tier Selection */}
+      {/* License Confirmation */}
       <div className="space-y-3 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900">Pilih Tier Lisensi</h2>
-        {LICENSE_TIERS.map((tier) => (
-          <Card
-            key={tier.tier}
-            className={`cursor-pointer transition-all ${
-              selectedTier === tier.tier
-                ? 'ring-2 ring-blue-500 border-blue-500'
-                : 'hover:border-gray-300'
-            }`}
-            onClick={() => setSelectedTier(tier.tier)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    selectedTier === tier.tier ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                  }`}>
-                    {selectedTier === tier.tier && <Check className="w-4 h-4 text-white" />}
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{tier.label}</p>
-                    <p className="text-sm text-gray-500">{tier.description}</p>
-                  </div>
+        <h2 className="text-lg font-semibold text-gray-900">Konfirmasi Lisensi</h2>
+        <Card className="ring-2 ring-blue-500 border-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full border-2 border-blue-500 bg-blue-500 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-lg font-bold text-blue-600">{formatPrice(tier.price)}</p>
+                <div>
+                  <p className="font-medium text-gray-900">{selectedTierData?.label}</p>
+                  <p className="text-sm text-gray-500">{selectedTierData?.description}</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <p className="text-lg font-bold text-blue-600">{formatPrice(selectedTierData?.price || 0)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <p className="text-xs text-gray-500 text-center">
+          Tier lisensi ditentukan berdasarkan kapasitas venue yang Anda pilih saat pendaftaran
+        </p>
       </div>
 
       {/* Summary */}
