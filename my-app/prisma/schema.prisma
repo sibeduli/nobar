@@ -10,7 +10,7 @@ model Merchant {
   id            String   @id @default(cuid())
   businessName  String
   ownerName     String   // From Google account
-  email         String   @unique // From Google account
+  email         String   // From Google account (not unique - one user can have multiple venues)
   phone         String
   contactPerson String?  // Contact person name for venue
   venueType     String
