@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +8,14 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     
     const merchant = await prisma.merchant.findUnique({
       where: { id },
@@ -17,6 +26,14 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: 'Venue tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership
+    if (merchant.email !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 
@@ -36,9 +53,18 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
-    // Check if venue has a paid license
+    // Check if venue exists and belongs to user
     const existingMerchant = await prisma.merchant.findUnique({
       where: { id },
       include: { license: true },
@@ -48,6 +74,14 @@ export async function PATCH(
       return NextResponse.json(
         { success: false, error: 'Venue tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership
+    if (existingMerchant.email !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 
@@ -79,8 +113,16 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
 
-    // Check if venue has a paid license
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Check if venue exists and belongs to user
     const existingMerchant = await prisma.merchant.findUnique({
       where: { id },
       include: { license: true },
@@ -90,6 +132,14 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: 'Venue tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership
+    if (existingMerchant.email !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 

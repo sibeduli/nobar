@@ -46,6 +46,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'License not found' }, { status: 404 });
     }
 
+    // Check ownership
+    if (license.venue.email !== session.user.email) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     // Calculate price server-side based on license tier - ignore any amount from client
     const pricing = calculateTotalPrice(license.tier);
     if (!pricing) {

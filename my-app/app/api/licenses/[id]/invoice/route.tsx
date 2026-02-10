@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { renderToBuffer } from '@react-pdf/renderer';
 import React from 'react';
 import {
@@ -424,6 +425,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const license = await prisma.license.findUnique({
       where: { id },
@@ -434,6 +440,11 @@ export async function GET(
 
     if (!license) {
       return NextResponse.json({ error: 'License not found' }, { status: 404 });
+    }
+
+    // Check ownership - only allow invoice download for own licenses
+    if (license.venue.email !== session.user.email) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Fetch user profile by venue email

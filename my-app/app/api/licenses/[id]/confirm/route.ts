@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { coreApi } from '@/lib/midtrans';
 
 // Called after successful payment to confirm and activate license
@@ -9,18 +10,28 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
+    const session = await auth();
     const body = await request.json();
     const { orderId } = body;
 
-    // Find the license
+    // Find the license with venue info
     const license = await prisma.license.findUnique({
       where: { id },
+      include: { venue: true },
     });
 
     if (!license) {
       return NextResponse.json(
         { success: false, error: 'License tidak ditemukan' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership
+    if (session?.user?.email && license.venue.email !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 

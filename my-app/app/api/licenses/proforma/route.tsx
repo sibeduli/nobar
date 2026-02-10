@@ -384,6 +384,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
     }
 
+    // Check ownership
+    if (venue.email !== session.user.email) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     // Fetch user profile
     const user = await prisma.user.findUnique({
       where: { email: session.user.email || '' },

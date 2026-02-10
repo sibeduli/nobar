@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 
 // Server-side pricing - cannot be tampered with
 const LICENSE_TIERS: Record<number, { price: number }> = {
@@ -90,7 +91,22 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
+    const session = await auth();
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Only return licenses for venues owned by the current user
     const licenses = await prisma.license.findMany({
+      where: {
+        venue: {
+          email: session.user.email,
+        },
+      },
       include: {
         venue: true,
       },

@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/lib/auth';
 import { coreApi } from '@/lib/midtrans';
 
 // Check and update license status based on Midtrans order ID
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { orderId } = body;
 
@@ -15,15 +24,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find license by midtransId
+    // Find license by midtransId with venue info
     const license = await prisma.license.findFirst({
       where: { midtransId: orderId },
+      include: { venue: true },
     });
 
     if (!license) {
       return NextResponse.json(
         { success: false, error: 'License tidak ditemukan untuk order ini' },
         { status: 404 }
+      );
+    }
+
+    // Check ownership
+    if (license.venue.email !== session.user.email) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied' },
+        { status: 403 }
       );
     }
 
