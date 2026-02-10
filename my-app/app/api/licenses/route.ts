@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Server-side pricing - cannot be tampered with
+const LICENSE_TIERS: Record<number, { price: number }> = {
+  1: { price: 5000000 },
+  2: { price: 10000000 },
+  3: { price: 20000000 },
+  4: { price: 40000000 },
+  5: { price: 100000000 },
+};
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12;
+
+const calculateTotalPrice = (tier: number) => {
+  const tierData = LICENSE_TIERS[tier];
+  if (!tierData) return null;
+  
+  const basePrice = tierData.price;
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  
+  return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { venueId, tier, price } = body;
+    const { venueId } = body;
 
     // Check if venue exists
     const venue = await prisma.merchant.findUnique({
@@ -19,6 +42,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get tier from venue's capacity (which stores the tier number)
+    const tier = venue.capacity;
+    
+    // Calculate price server-side - ignore any price sent from client
+    const pricing = calculateTotalPrice(tier);
+    if (!pricing) {
+      return NextResponse.json(
+        { success: false, error: 'Tier tidak valid' },
+        { status: 400 }
+      );
+    }
+
     // Check if license already exists
     if (venue.license) {
       // Update existing license
@@ -26,11 +61,11 @@ export async function POST(request: NextRequest) {
         where: { id: venue.license.id },
         data: {
           tier,
-          price,
+          price: pricing.total, // Server-calculated total
           status: 'unpaid',
         },
       });
-      return NextResponse.json({ success: true, license });
+      return NextResponse.json({ success: true, license, pricing });
     }
 
     // Create new license
@@ -38,12 +73,12 @@ export async function POST(request: NextRequest) {
       data: {
         venueId,
         tier,
-        price,
+        price: pricing.total, // Server-calculated total
         status: 'unpaid',
       },
     });
 
-    return NextResponse.json({ success: true, license }, { status: 201 });
+    return NextResponse.json({ success: true, license, pricing }, { status: 201 });
   } catch (error) {
     console.error('Error creating license:', error);
     return NextResponse.json(

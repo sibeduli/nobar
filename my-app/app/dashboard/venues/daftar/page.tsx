@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, CreditCard, Clock } from 'lucide-react';
+import { ArrowLeft, CreditCard, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
@@ -37,6 +37,15 @@ const CAPACITY_TIERS = [
 
 const getTierByValue = (tier: number) => {
   return CAPACITY_TIERS.find(t => t.tier === tier) || CAPACITY_TIERS[0];
+};
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12; // 12% PPN
+
+const calculateTotal = (basePrice: number) => {
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
 };
 
 const formatPrice = (price: number) => {
@@ -393,17 +402,46 @@ export default function DaftarVenuePage() {
           </DialogHeader>
           
           <div className="py-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Lisensi Anda:</strong>
-              </p>
-              <p className="text-lg font-bold text-blue-900">
-                Tier {selectedTier} ({getTierByValue(selectedTier).label})
-              </p>
-              <p className="text-2xl font-bold text-blue-600">
-                {formatPrice(getTierByValue(selectedTier).price)}
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 space-y-3">
+              <div>
+                <p className="text-sm text-blue-800">
+                  <strong>Lisensi Anda:</strong>
+                </p>
+                <p className="text-lg font-bold text-blue-900">
+                  Tier {selectedTier} ({getTierByValue(selectedTier).label})
+                </p>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Biaya Lisensi</span>
+                  <span className="text-blue-900">{formatPrice(getTierByValue(selectedTier).price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">PPN (12%)</span>
+                  <span className="text-blue-900">{formatPrice(calculateTotal(getTierByValue(selectedTier).price).ppn)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700 flex items-center gap-1">
+                    Biaya Aplikasi
+                    <span className="group relative">
+                      <Info className="w-3.5 h-3.5 text-blue-400 cursor-help" />
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                        Biaya pemrosesan dan pemeliharaan sistem aplikasi
+                      </span>
+                    </span>
+                  </span>
+                  <span className="text-blue-900">{formatPrice(APPLICATION_FEE)}</span>
+                </div>
+                <div className="border-t border-blue-200 pt-2 mt-2">
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-blue-800">Total</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {formatPrice(calculateTotal(getTierByValue(selectedTier).price).total)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600">
                 Berlaku untuk seluruh event Piala Dunia 2026
               </p>
             </div>

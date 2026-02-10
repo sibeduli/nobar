@@ -46,12 +46,26 @@ interface UserProfile {
   companyRole: string | null;
 }
 
-const LICENSE_TIERS: Record<number, string> = {
-  1: 'Tier 1 (≤50 orang)',
-  2: 'Tier 2 (51-100 orang)',
-  3: 'Tier 3 (101-250 orang)',
-  4: 'Tier 4 (251-500 orang)',
-  5: 'Tier 5 (501-1000 orang)',
+const LICENSE_TIERS: Record<number, { label: string; basePrice: number }> = {
+  1: { label: 'Tier 1 (≤50 orang)', basePrice: 5000000 },
+  2: { label: 'Tier 2 (51-100 orang)', basePrice: 10000000 },
+  3: { label: 'Tier 3 (101-250 orang)', basePrice: 20000000 },
+  4: { label: 'Tier 4 (251-500 orang)', basePrice: 40000000 },
+  5: { label: 'Tier 5 (501-1000 orang)', basePrice: 100000000 },
+};
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12;
+
+const calculateBreakdown = (tier: number) => {
+  const tierData = LICENSE_TIERS[tier];
+  if (!tierData) return null;
+  
+  const basePrice = tierData.basePrice;
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  
+  return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
 };
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -242,13 +256,29 @@ export default function InvoicePage() {
               </thead>
               <tbody>
                 <tr className="border-t">
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3">
                     <p className="font-medium text-gray-900">Lisensi TVRI Piala Dunia 2026</p>
-                    <p className="text-sm text-gray-500">{LICENSE_TIERS[license.tier]}</p>
+                    <p className="text-sm text-gray-500">{LICENSE_TIERS[license.tier]?.label}</p>
                     <p className="text-sm text-gray-500">Venue: {license.venue.businessName}</p>
                   </td>
-                  <td className="px-4 py-4 text-right font-medium text-gray-900">
-                    {formatPrice(license.price)}
+                  <td className="px-4 py-3 text-right font-medium text-gray-900">
+                    {formatPrice(calculateBreakdown(license.tier)?.basePrice || 0)}
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-3">
+                    <p className="text-gray-700">PPN (12%)</p>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-900">
+                    {formatPrice(calculateBreakdown(license.tier)?.ppn || 0)}
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="px-4 py-3">
+                    <p className="text-gray-700">Biaya Aplikasi</p>
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-900">
+                    {formatPrice(APPLICATION_FEE)}
                   </td>
                 </tr>
               </tbody>
@@ -256,7 +286,7 @@ export default function InvoicePage() {
                 <tr className="border-t">
                   <td className="px-4 py-3 font-medium text-gray-900">Total</td>
                   <td className="px-4 py-3 text-right font-bold text-gray-900 text-lg">
-                    {formatPrice(license.price)}
+                    {formatPrice(calculateBreakdown(license.tier)?.total || license.price)}
                   </td>
                 </tr>
               </tfoot>

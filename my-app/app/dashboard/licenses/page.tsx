@@ -37,6 +37,15 @@ const getTierByValue = (tier: number) => {
   return LICENSE_TIERS.find(t => t.tier === tier) || LICENSE_TIERS[0];
 };
 
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12; // 12% PPN
+
+const calculateTotal = (basePrice: number) => {
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
+};
+
 const capacityTierLabels: Record<number, string> = {
   1: '≤50 orang',
   2: '51-100 orang',
@@ -171,7 +180,7 @@ export default function LicensesPage() {
                             {venueTypeLabels[venue.venueType] || venue.venueType} • {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
                           </p>
                           <p className="text-sm text-blue-600">
-                            {venueTier.label} ({venueTier.description}) - {formatPrice(venueTier.price)}
+                            {venueTier.label} ({venueTier.description}) - Total: {formatPrice(calculateTotal(venueTier.price).total)}
                           </p>
                         </div>
                       </div>

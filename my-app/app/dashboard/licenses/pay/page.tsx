@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Store, Check, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Store, Check, AlertTriangle, Pencil, Trash2, Info } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,15 @@ const LICENSE_TIERS = [
   { tier: 4, maxCapacity: 500, price: 40000000, label: 'Tier 4', description: '251-500 orang' },
   { tier: 5, maxCapacity: 1000, price: 100000000, label: 'Tier 5', description: '501-1000 orang' },
 ];
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12; // 12% PPN
+
+const calculateTotal = (basePrice: number) => {
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
+};
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -174,20 +183,15 @@ export default function LicensePayPage() {
       return;
     }
 
-    const tier = LICENSE_TIERS.find(t => t.tier === selectedTier);
-    if (!tier) return;
-
     setIsProcessing(true);
 
     try {
-      // Create license record first
+      // Create license record - backend calculates tier and price from venue
       const licenseRes = await fetch('/api/licenses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           venueId: venue.id,
-          tier: tier.tier,
-          price: tier.price,
         }),
       });
 
@@ -198,15 +202,12 @@ export default function LicensePayPage() {
         return;
       }
 
-      // Create payment
+      // Create payment - backend calculates all amounts server-side
       const paymentRes = await fetch('/api/licenses/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           licenseId: licenseData.license.id,
-          venueName: venue.businessName,
-          amount: tier.price,
-          tier: tier.tier,
         }),
       });
 
@@ -371,20 +372,42 @@ export default function LicensePayPage() {
         </p>
       </div>
 
-      {/* Summary */}
+      {/* Payment Breakdown */}
       <Card className="mb-6 bg-gray-50">
-        <CardContent className="p-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-500">Total Pembayaran</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {formatPrice(selectedTierData?.price || 0)}
-              </p>
+        <CardContent className="p-4 space-y-3">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Biaya Lisensi ({selectedTierData?.label})</span>
+              <span className="text-gray-900">{formatPrice(selectedTierData?.price || 0)}</span>
             </div>
-            <p className="text-sm text-gray-500 text-right">
-              Berlaku untuk seluruh<br />Piala Dunia 2026
-            </p>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">PPN (12%)</span>
+              <span className="text-gray-900">{formatPrice(calculateTotal(selectedTierData?.price || 0).ppn)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600 flex items-center gap-1">
+                Biaya Aplikasi
+                <span className="group relative">
+                  <Info className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                    Biaya pemrosesan dan pemeliharaan sistem aplikasi
+                  </span>
+                </span>
+              </span>
+              <span className="text-gray-900">{formatPrice(APPLICATION_FEE)}</span>
+            </div>
+            <div className="border-t pt-2 mt-2">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-gray-900">Total Pembayaran</span>
+                <span className="text-xl font-bold text-gray-900">
+                  {formatPrice(calculateTotal(selectedTierData?.price || 0).total)}
+                </span>
+              </div>
+            </div>
           </div>
+          <p className="text-xs text-gray-500 text-right">
+            Berlaku untuk seluruh Piala Dunia 2026
+          </p>
         </CardContent>
       </Card>
 
