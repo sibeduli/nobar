@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Store, Check, AlertTriangle, Pencil, Trash2, Info } from 'lucide-react';
+import { ArrowLeft, CreditCard, Store, Check, AlertTriangle, Pencil, Trash2, Info, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,6 +62,11 @@ interface Venue {
   venueType: string;
   kabupaten: string;
   provinsi: string;
+  ownerName: string;
+  phone: string;
+  contactPerson: string | null;
+  alamatLengkap: string;
+  email: string;
 }
 
 interface UserProfile {
@@ -87,6 +92,7 @@ export default function LicensePayPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloadingProforma, setIsDownloadingProforma] = useState(false);
 
   useEffect(() => {
     // Load Midtrans Snap script
@@ -170,6 +176,36 @@ export default function LicensePayPage() {
       alert('Gagal menghapus venue');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleDownloadProforma = async () => {
+    if (!venue) return;
+    
+    setIsDownloadingProforma(true);
+    try {
+      const response = await fetch('/api/licenses/proforma', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ venueId: venue.id }),
+      });
+      
+      if (!response.ok) throw new Error('Failed to download proforma');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Proforma-${venue.businessName.replace(/[^a-zA-Z0-9]/g, '-')}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading proforma:', error);
+      alert('Gagal mengunduh proforma. Silakan coba lagi.');
+    } finally {
+      setIsDownloadingProforma(false);
     }
   };
 
@@ -315,7 +351,7 @@ export default function LicensePayPage() {
       {/* Venue Info */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Store className="w-5 h-5 text-blue-600" />
@@ -323,7 +359,7 @@ export default function LicensePayPage() {
               <div>
                 <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
                 <p className="text-sm text-gray-500">
-                  Kapasitas: {selectedTierData?.description || `Tier ${venue.capacity}`} • {venue.kabupaten}, {venue.provinsi}
+                  Kapasitas: {selectedTierData?.description || `Tier ${venue.capacity}`}
                 </p>
               </div>
             </div>
@@ -343,6 +379,31 @@ export default function LicensePayPage() {
                 <Trash2 className="w-4 h-4 mr-1" />
                 Hapus
               </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4">
+            <div>
+              <p className="text-gray-500 font-medium mb-1">Alamat Venue</p>
+              <p className="text-gray-900">{venue.alamatLengkap}</p>
+              <p className="text-gray-900">{venue.kabupaten}, {venue.provinsi}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium mb-1">Contact Person</p>
+              <p className="text-gray-900">{venue.contactPerson || venue.ownerName}</p>
+              <p className="text-gray-900">{venue.phone}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 text-sm border-t pt-4 mt-4">
+            <div>
+              <p className="text-gray-500 font-medium mb-1">Billing To</p>
+              <p className="text-gray-900 font-medium">{userProfile?.companyName || venue.ownerName}</p>
+              <p className="text-gray-600 text-xs">a.n. {venue.ownerName}</p>
+              <p className="text-gray-900">{venue.email}</p>
+            </div>
+            <div>
+              <p className="text-gray-500 font-medium mb-1">Billing Address</p>
+              <p className="text-gray-900">{userProfile?.billingAddress || venue.alamatLengkap}</p>
+              {!userProfile?.billingAddress && <p className="text-gray-900">{venue.kabupaten}, {venue.provinsi}</p>}
             </div>
           </div>
         </CardContent>
@@ -411,15 +472,26 @@ export default function LicensePayPage() {
         </CardContent>
       </Card>
 
-      <Button
-        size="lg"
-        className="w-full"
-        disabled={isProcessing || !snapLoaded || !profileComplete}
-        onClick={handlePayment}
-      >
-        <CreditCard className="w-4 h-4 mr-2" />
-        {isProcessing ? 'Memproses...' : 'Bayar Sekarang'}
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          size="lg"
+          className="flex-1"
+          disabled={isProcessing || !snapLoaded || !profileComplete}
+          onClick={handlePayment}
+        >
+          <CreditCard className="w-4 h-4 mr-2" />
+          {isProcessing ? 'Memproses...' : 'Bayar Sekarang'}
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          disabled={isDownloadingProforma}
+          onClick={handleDownloadProforma}
+        >
+          <Download className="w-4 h-4 mr-2" />
+          {isDownloadingProforma ? 'Mengunduh...' : 'Unduh Proforma'}
+        </Button>
+      </div>
 
       <p className="text-center text-sm text-gray-500 mt-4">
         Pembayaran diproses secara aman melalui Midtrans
