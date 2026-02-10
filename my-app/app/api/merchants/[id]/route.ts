@@ -38,6 +38,26 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
+    // Check if venue has a paid license
+    const existingMerchant = await prisma.merchant.findUnique({
+      where: { id },
+      include: { license: true },
+    });
+
+    if (!existingMerchant) {
+      return NextResponse.json(
+        { success: false, error: 'Venue tidak ditemukan' },
+        { status: 404 }
+      );
+    }
+
+    if (existingMerchant.license?.status === 'paid') {
+      return NextResponse.json(
+        { success: false, error: 'Venue dengan lisensi aktif tidak dapat diedit' },
+        { status: 403 }
+      );
+    }
+
     const merchant = await prisma.merchant.update({
       where: { id },
       data: body,
@@ -59,6 +79,26 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    // Check if venue has a paid license
+    const existingMerchant = await prisma.merchant.findUnique({
+      where: { id },
+      include: { license: true },
+    });
+
+    if (!existingMerchant) {
+      return NextResponse.json(
+        { success: false, error: 'Venue tidak ditemukan' },
+        { status: 404 }
+      );
+    }
+
+    if (existingMerchant.license?.status === 'paid') {
+      return NextResponse.json(
+        { success: false, error: 'Venue dengan lisensi aktif tidak dapat dihapus' },
+        { status: 403 }
+      );
+    }
 
     await prisma.merchant.delete({
       where: { id },

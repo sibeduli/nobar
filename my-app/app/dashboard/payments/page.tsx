@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, CheckCircle, Clock, AlertCircle, Store } from 'lucide-react';
+import { CreditCard, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 interface License {
@@ -14,6 +15,15 @@ interface License {
   status: string;
   paidAt: string | null;
   midtransId: string | null;
+  transactionId: string | null;
+  paymentType: string | null;
+  transactionStatus: string | null;
+  transactionTime: string | null;
+  grossAmount: string | null;
+  bank: string | null;
+  vaNumber: string | null;
+  cardType: string | null;
+  maskedCard: string | null;
   createdAt: string;
   venue: {
     id: string;
@@ -193,7 +203,15 @@ export default function PaymentsPage() {
                             </p>
                           </div>
                         </div>
-                        <p className="font-bold text-green-600">{formatPrice(license.price)}</p>
+                        <div className="text-right flex items-center gap-3">
+                          <p className="font-bold text-green-600">{formatPrice(license.price)}</p>
+                          <Link href={`/dashboard/payments/invoice/${license.id}`}>
+                            <Button variant="outline" size="sm">
+                              <FileText className="w-4 h-4 mr-1" />
+                              Lihat Invoice
+                            </Button>
+                          </Link>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

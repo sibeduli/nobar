@@ -9,7 +9,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
 
   const handleGoogleAuth = () => {
-    signIn('google', { callbackUrl: '/daftar' });
+    signIn('google', { callbackUrl: '/dashboard' });
   };
 
   return (

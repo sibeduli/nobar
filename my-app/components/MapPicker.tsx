@@ -47,7 +47,9 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
     libraries,
   });
 
-  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(null);
+  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
+    initialLat !== -6.2088 || initialLng !== 106.8456 ? { lat: initialLat, lng: initialLng } : null
+  );
   const [mapCenter, setMapCenter] = useState({ lat: initialLat, lng: initialLng });
   const [zoom, setZoom] = useState(13);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);

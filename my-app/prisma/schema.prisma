@@ -31,15 +31,24 @@ model Merchant {
 }
 
 model License {
-  id          String    @id @default(cuid())
-  venue       Merchant  @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  venueId     String    @unique
-  tier        Int       // 1, 2, 3, 4, or 5
-  price       Int       // amount in IDR
-  status      String    @default("unpaid") // "unpaid", "paid"
-  paidAt      DateTime?
-  midtransId  String?   // order_id from Midtrans
-  createdAt   DateTime  @default(now())
+  id                String    @id @default(cuid())
+  venue             Merchant  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  venueId           String    @unique
+  tier              Int       // 1, 2, 3, 4, or 5
+  price             Int       // amount in IDR
+  status            String    @default("unpaid") // "unpaid", "paid"
+  paidAt            DateTime?
+  midtransId        String?   // order_id from Midtrans
+  transactionId     String?   // transaction_id from Midtrans
+  paymentType       String?   // e.g. "credit_card", "bank_transfer", "gopay"
+  transactionStatus String?   // e.g. "capture", "settlement"
+  transactionTime   DateTime? // when payment was made
+  grossAmount       String?   // amount string from Midtrans
+  bank              String?   // bank name if bank transfer
+  vaNumber          String?   // VA number if bank transfer
+  cardType          String?   // card type if credit card
+  maskedCard        String?   // masked card number
+  createdAt         DateTime  @default(now())
 }
 
 model User {

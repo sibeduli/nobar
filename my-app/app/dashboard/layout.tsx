@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
+import WelcomeModal from '@/components/WelcomeModal';
 
 export default function DashboardLayout({
   children,
@@ -27,5 +28,10 @@ export default function DashboardLayout({
     );
   }
 
-  return <Sidebar>{children}</Sidebar>;
+  return (
+    <>
+      <WelcomeModal />
+      <Sidebar>{children}</Sidebar>
+    </>
+  );
 }

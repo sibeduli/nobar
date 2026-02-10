@@ -4,8 +4,19 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Plus, MapPin, Users, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Store, Plus, MapPin, Users, Eye, Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface License {
   id: string;
@@ -53,8 +64,13 @@ const getLicenseBadge = (license: License | null) => {
 };
 
 export default function VenuesPage() {
+  const router = useRouter();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [venueToDelete, setVenueToDelete] = useState<Venue | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchVenues();
@@ -71,6 +87,36 @@ export default function VenuesPage() {
       console.error('Error fetching venues:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openDeleteDialog = (venue: Venue) => {
+    setVenueToDelete(venue);
+    setDeleteConfirmText('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!venueToDelete || deleteConfirmText !== 'HAPUS') return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/merchants/${venueToDelete.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVenues(venues.filter(v => v.id !== venueToDelete.id));
+        setDeleteDialogOpen(false);
+        setVenueToDelete(null);
+      } else {
+        alert(data.error || 'Gagal menghapus venue');
+      }
+    } catch (error) {
+      console.error('Error deleting venue:', error);
+      alert('Gagal menghapus venue');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -169,6 +215,25 @@ export default function VenuesPage() {
                         Detail
                       </Button>
                     </Link>
+                    {(!venue.license || venue.license.status !== 'paid') && (
+                      <>
+                        <Link href={`/dashboard/venues/${venue.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            <Pencil className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => openDeleteDialog(venue)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Hapus
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -176,6 +241,54 @@ export default function VenuesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <DialogTitle>Hapus Venue</DialogTitle>
+            </div>
+            <DialogDescription>
+              Anda akan menghapus venue <strong>{venueToDelete?.businessName}</strong>. 
+              Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirmDelete">
+                Ketik <strong>HAPUS</strong> untuk mengkonfirmasi
+              </Label>
+              <Input
+                id="confirmDelete"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="HAPUS"
+                className="uppercase"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteConfirmText !== 'HAPUS' || isDeleting}
+            >
+              {isDeleting ? 'Menghapus...' : 'Hapus Venue'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

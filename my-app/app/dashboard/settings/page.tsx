@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,8 +19,11 @@ interface UserProfile {
 
 export default function SettingsPage() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const profileCardRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [shouldHighlight, setShouldHighlight] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     phone: '',
     billingAddress: '',
@@ -30,7 +34,20 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+    
+    // Check if we should highlight the profile card
+    if (searchParams.get('highlight') === 'profile') {
+      setShouldHighlight(true);
+      // Scroll to profile card after a short delay
+      setTimeout(() => {
+        profileCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+      // Remove highlight after animation
+      setTimeout(() => {
+        setShouldHighlight(false);
+      }, 2500);
+    }
+  }, [searchParams]);
 
   const fetchProfile = async () => {
     try {
@@ -52,7 +69,17 @@ export default function SettingsPage() {
     }
   };
 
+  const isProfileComplete = () => {
+    return profile.phone && profile.billingAddress && profile.companyName && profile.companyRole;
+  };
+
   const handleSave = async () => {
+    // Validate all required fields
+    if (!profile.phone || !profile.billingAddress || !profile.companyName || !profile.companyRole) {
+      alert('Semua field wajib diisi');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const res = await fetch('/api/user', {
@@ -130,10 +157,13 @@ export default function SettingsPage() {
       </Card>
 
       {/* Editable Profile */}
-      <Card>
+      <Card 
+        ref={profileCardRef}
+        className={shouldHighlight ? 'animate-pulse ring-2 ring-blue-500 ring-offset-2' : ''}
+      >
         <CardHeader>
           <CardTitle>Profil</CardTitle>
-          <CardDescription>Informasi tambahan untuk akun Anda</CardDescription>
+          <CardDescription>Informasi tambahan untuk akun Anda. Semua field wajib diisi sebelum melakukan pembayaran.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {isLoading ? (
@@ -144,7 +174,7 @@ export default function SettingsPage() {
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Nomor Telepon (Whatsapp Aktif)</Label>
+                  <Label htmlFor="phone">Nomor Telepon (Whatsapp Aktif) <span className="text-red-500">*</span></Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -152,37 +182,41 @@ export default function SettingsPage() {
                     value={profile.phone}
                     onChange={handleChange}
                     placeholder="08xxxxxxxxxx"
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyRole">Jabatan/Peran</Label>
+                  <Label htmlFor="companyRole">Jabatan/Peran <span className="text-red-500">*</span></Label>
                   <Input
                     id="companyRole"
                     name="companyRole"
                     value={profile.companyRole}
                     onChange={handleChange}
                     placeholder="Contoh: Pemilik, Manager, dll"
+                    required
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="companyName">Nama Perusahaan (opsional)</Label>
+                <Label htmlFor="companyName">Nama Perusahaan <span className="text-red-500">*</span></Label>
                 <Input
                   id="companyName"
                   name="companyName"
                   value={profile.companyName}
                   onChange={handleChange}
                   placeholder="PT/CV Nama Perusahaan"
+                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="billingAddress">Alamat Penagihan</Label>
+                <Label htmlFor="billingAddress">Alamat Penagihan <span className="text-red-500">*</span></Label>
                 <Input
                   id="billingAddress"
                   name="billingAddress"
                   value={profile.billingAddress}
                   onChange={handleChange}
                   placeholder="Alamat lengkap untuk penagihan"
+                  required
                 />
               </div>
               <Button onClick={handleSave} disabled={isSaving}>

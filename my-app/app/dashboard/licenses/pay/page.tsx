@@ -4,8 +4,18 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Store, Check } from 'lucide-react';
+import { ArrowLeft, CreditCard, Store, Check, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 declare global {
   interface Window {
@@ -45,6 +55,13 @@ interface Venue {
   provinsi: string;
 }
 
+interface UserProfile {
+  phone: string | null;
+  billingAddress: string | null;
+  companyName: string | null;
+  companyRole: string | null;
+}
+
 export default function LicensePayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -56,6 +73,11 @@ export default function LicensePayPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [snapLoaded, setSnapLoaded] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileComplete, setProfileComplete] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     // Load Midtrans Snap script
@@ -76,7 +98,23 @@ export default function LicensePayPage() {
     if (venueId) {
       fetchVenue(venueId);
     }
+    fetchUserProfile();
   }, [venueId]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const res = await fetch('/api/user');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserProfile(data.user);
+        const isComplete = data.user.phone && data.user.billingAddress && 
+                          data.user.companyName && data.user.companyRole;
+        setProfileComplete(!!isComplete);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchVenue = async (id: string) => {
     try {
@@ -95,8 +133,42 @@ export default function LicensePayPage() {
     }
   };
 
+  const openDeleteDialog = () => {
+    setDeleteConfirmText('');
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteVenue = async () => {
+    if (!venue || deleteConfirmText !== 'HAPUS') return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/merchants/${venue.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push('/dashboard/venues');
+      } else {
+        alert(data.error || 'Gagal menghapus venue');
+      }
+    } catch (error) {
+      console.error('Error deleting venue:', error);
+      alert('Gagal menghapus venue');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handlePayment = async () => {
     if (!venue || !snapLoaded) return;
+
+    // Check if profile is complete
+    if (!profileComplete) {
+      alert('Silakan lengkapi profil Anda terlebih dahulu sebelum melakukan pembayaran.');
+      router.push('/dashboard/settings');
+      return;
+    }
 
     const tier = LICENSE_TIERS.find(t => t.tier === selectedTier);
     if (!tier) return;
@@ -213,18 +285,59 @@ export default function LicensePayPage() {
         <p className="text-gray-500 mt-1">Pilih tier lisensi untuk venue Anda</p>
       </div>
 
+      {/* Profile Incomplete Warning */}
+      {!profileComplete && (
+        <Card className="mb-6 border-yellow-300 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-yellow-800">Profil Belum Lengkap</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Anda harus melengkapi profil terlebih dahulu sebelum melakukan pembayaran.
+                </p>
+                <Link href="/dashboard/settings">
+                  <Button variant="outline" size="sm" className="mt-3 border-yellow-600 text-yellow-700 hover:bg-yellow-100">
+                    Lengkapi Profil
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Venue Info */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Store className="w-5 h-5 text-blue-600" />
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Store className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
+                <p className="text-sm text-gray-500">
+                  Kapasitas: {venue.capacity} orang • {venue.kabupaten}, {venue.provinsi}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
-              <p className="text-sm text-gray-500">
-                Kapasitas: {venue.capacity} orang • {venue.kabupaten}, {venue.provinsi}
-              </p>
+            <div className="flex items-center gap-2">
+              <Link href={`/dashboard/venues/${venue.id}/edit`}>
+                <Button variant="outline" size="sm">
+                  <Pencil className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={openDeleteDialog}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Hapus
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -283,7 +396,7 @@ export default function LicensePayPage() {
       <Button
         size="lg"
         className="w-full"
-        disabled={isProcessing || !snapLoaded}
+        disabled={isProcessing || !snapLoaded || !profileComplete}
         onClick={handlePayment}
       >
         <CreditCard className="w-4 h-4 mr-2" />
@@ -293,6 +406,61 @@ export default function LicensePayPage() {
       <p className="text-center text-sm text-gray-500 mt-4">
         Pembayaran diproses secara aman melalui Midtrans
       </p>
+
+      <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <p className="text-xs text-amber-800 text-center">
+          <strong>Perhatian:</strong> Setelah pembayaran berhasil dan sertifikat diterbitkan, 
+          data venue tidak dapat diubah atau dihapus.
+        </p>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <DialogTitle>Hapus Venue</DialogTitle>
+            </div>
+            <DialogDescription>
+              Anda akan menghapus venue <strong>{venue?.businessName}</strong>. 
+              Tindakan ini tidak dapat dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirmDeletePay">
+                Ketik <strong>HAPUS</strong> untuk mengkonfirmasi
+              </Label>
+              <Input
+                id="confirmDeletePay"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="HAPUS"
+                className="uppercase"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteVenue}
+              disabled={deleteConfirmText !== 'HAPUS' || isDeleting}
+            >
+              {isDeleting ? 'Menghapus...' : 'Hapus Venue'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
