@@ -257,15 +257,25 @@ export default function LicensePayPage() {
             console.log('Payment success:', result);
             // Confirm and activate license
             try {
-              await fetch(`/api/licenses/${licenseData.license.id}/confirm`, {
+              const confirmRes = await fetch(`/api/licenses/${licenseData.license.id}/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId: paymentData.order_id }),
               });
+              const confirmData = await confirmRes.json();
+              if (!confirmData.success) {
+                console.error('License confirmation failed:', confirmData.error);
+                // Still redirect with processing status - webhook will handle activation
+                router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=processing`);
+                return;
+              }
             } catch (e) {
               console.error('Failed to confirm license:', e);
+              // Still redirect with processing status - webhook will handle activation
+              router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=processing`);
+              return;
             }
-            router.push(`/dashboard/payments?status=success&order_id=${paymentData.order_id}`);
+            router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=success`);
           },
           onPending: (result) => {
             console.log('Payment pending:', result);

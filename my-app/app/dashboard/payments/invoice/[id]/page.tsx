@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,10 +107,29 @@ const formatDate = (dateString: string) => {
 export default function InvoicePage() {
   const params = useParams();
   const router = useRouter();
-  const { showError } = useAlert();
+  const searchParams = useSearchParams();
+  const { showError, showSuccess, showInfo } = useAlert();
   const [license, setLicense] = useState<License | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Track if status modal has been shown to prevent double-trigger
+  const hasShownStatus = useRef(false);
+
+  // Show status modal if redirected from payment
+  useEffect(() => {
+    const status = searchParams.get('status');
+    if (status && !hasShownStatus.current) {
+      hasShownStatus.current = true;
+      if (status === 'success') {
+        showSuccess('Pembayaran berhasil! Terima kasih telah melakukan pembayaran.');
+      } else if (status === 'processing') {
+        showInfo('Pembayaran diterima, sedang diproses. Status akan diperbarui dalam beberapa saat.');
+      }
+      // Remove the query param from URL without reload
+      router.replace(`/dashboard/payments/invoice/${params.id}`, { scroll: false });
+    }
+  }, [searchParams, params.id, router, showSuccess, showInfo]);
 
   useEffect(() => {
     if (params.id) {
