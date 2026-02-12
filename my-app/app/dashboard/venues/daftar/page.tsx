@@ -113,6 +113,17 @@ export default function DaftarVenuePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required select fields
+    if (!formData.venueType) {
+      alert('Silakan pilih jenis venue');
+      return;
+    }
+    if (!formData.capacity) {
+      alert('Silakan pilih kapasitas pengunjung');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -183,7 +194,7 @@ export default function DaftarVenuePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="businessName">Nama Usaha/Venue</Label>
+              <Label htmlFor="businessName">Nama Usaha/Venue <span className="text-red-500">*</span></Label>
               <Input
                 id="businessName"
                 name="businessName"
@@ -195,7 +206,7 @@ export default function DaftarVenuePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="contactPerson">Nama Contact Person</Label>
+                <Label htmlFor="contactPerson">Nama Contact Person <span className="text-red-500">*</span></Label>
                 <Input
                   id="contactPerson"
                   name="contactPerson"
@@ -206,7 +217,7 @@ export default function DaftarVenuePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Nomor Telepon (Whatsapp Aktif)</Label>
+                <Label htmlFor="phone">Nomor Telepon (Whatsapp Aktif) <span className="text-red-500">*</span></Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -230,7 +241,7 @@ export default function DaftarVenuePage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="venueType">Jenis Venue</Label>
+                <Label htmlFor="venueType">Jenis Venue <span className="text-red-500">*</span></Label>
                 <Select value={formData.venueType} onValueChange={(v) => handleSelectChange('venueType', v)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih jenis venue" />
@@ -247,7 +258,7 @@ export default function DaftarVenuePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="capacity">Kapasitas Pengunjung</Label>
+                <Label htmlFor="capacity">Kapasitas Pengunjung <span className="text-red-500">*</span></Label>
                 <Select 
                   value={formData.capacity} 
                   onValueChange={(v) => handleSelectChange('capacity', v)}
@@ -310,7 +321,7 @@ export default function DaftarVenuePage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="provinsi">Provinsi</Label>
+                <Label htmlFor="provinsi">Provinsi <span className="text-red-500">*</span></Label>
                 <Input
                   id="provinsi"
                   name="provinsi"
@@ -321,7 +332,7 @@ export default function DaftarVenuePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="kabupaten">Kabupaten/Kota</Label>
+                <Label htmlFor="kabupaten">Kabupaten/Kota <span className="text-red-500">*</span></Label>
                 <Input
                   id="kabupaten"
                   name="kabupaten"
@@ -355,7 +366,7 @@ export default function DaftarVenuePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="alamatLengkap">Alamat Lengkap</Label>
+              <Label htmlFor="alamatLengkap">Alamat Lengkap <span className="text-red-500">*</span></Label>
               <Input
                 id="alamatLengkap"
                 name="alamatLengkap"
