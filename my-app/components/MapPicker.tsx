@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 
 interface AddressData {
   alamatLengkap: string;
@@ -18,7 +18,9 @@ interface MapPickerProps {
   initialLng?: number;
 }
 
-const libraries: ("places")[] = ["places"];
+const libraries: ("places" | "marker")[] = ["places", "marker"];
+
+const MAP_ID = 'deed0cebc921b1a36eaa8cbc';
 
 const mapContainerStyle = {
   width: '100%',
@@ -54,6 +56,8 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
   const [zoom, setZoom] = useState(13);
   const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   // Keep the callback ref updated
   useEffect(() => {
@@ -67,10 +71,18 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
     // Clear any existing content
     autocompleteContainerRef.current.innerHTML = '';
 
-    // Create the new PlaceAutocompleteElement
+    // Create the new PlaceAutocompleteElement - Indonesia only
+    // Use locationRestriction to strictly limit to Indonesia bounds
+    const indonesiaBounds = {
+      north: 6.0,
+      south: -11.0,
+      east: 141.0,
+      west: 95.0,
+    };
+    
     const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
-      componentRestrictions: { country: 'id' },
-      types: ['establishment', 'geocode'],
+      locationRestriction: indonesiaBounds,
+      types: ['establishment'],
     });
 
     // Style the element - force light mode
@@ -151,8 +163,32 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
     };
   }, [isLoaded]);
 
-  const onLoad = useCallback(() => {
-    // Map loaded
+  const onLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  // Handle marker creation and updates
+  useEffect(() => {
+    if (!mapRef.current || !marker) return;
+    
+    if (markerRef.current) {
+      markerRef.current.position = marker;
+    } else {
+      markerRef.current = new google.maps.marker.AdvancedMarkerElement({
+        map: mapRef.current,
+        position: marker,
+      });
+    }
+  }, [marker]);
+
+  // Cleanup marker on unmount
+  useEffect(() => {
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.map = null;
+        markerRef.current = null;
+      }
+    };
   }, []);
 
   const onMapClick = useCallback((e: google.maps.MapMouseEvent) => {
@@ -215,10 +251,10 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
+          mapId: MAP_ID,
         }}
       >
-        {marker && <Marker position={marker} />}
-      </GoogleMap>
+        </GoogleMap>
     </div>
   );
 }
