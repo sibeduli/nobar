@@ -73,17 +73,11 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
 
     // Create the new PlaceAutocompleteElement - Indonesia only
     // Use locationRestriction to strictly limit to Indonesia bounds
-    const indonesiaBounds = {
-      north: 6.0,
-      south: -11.0,
-      east: 141.0,
-      west: 95.0,
-    };
-    
+
     const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
-      locationRestriction: indonesiaBounds,
+      includedRegionCodes: ['id'],
       types: ['establishment'],
-    });
+    } as google.maps.places.PlaceAutocompleteElementOptions);
 
     // Style the element - force light mode
     placeAutocomplete.style.width = '100%';
