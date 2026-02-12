@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
 
 interface AddressData {
   alamatLengkap: string;
@@ -52,7 +52,104 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
   );
   const [mapCenter, setMapCenter] = useState({ lat: initialLat, lng: initialLng });
   const [zoom, setZoom] = useState(13);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null);
+  const onLocationSelectRef = useRef(onLocationSelect);
+
+  // Keep the callback ref updated
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
+
+  // Initialize PlaceAutocompleteElement when loaded
+  useEffect(() => {
+    if (!isLoaded || !autocompleteContainerRef.current) return;
+
+    // Clear any existing content
+    autocompleteContainerRef.current.innerHTML = '';
+
+    // Create the new PlaceAutocompleteElement
+    const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({
+      componentRestrictions: { country: 'id' },
+      types: ['establishment', 'geocode'],
+    });
+
+    // Style the element - force light mode
+    placeAutocomplete.style.width = '100%';
+    placeAutocomplete.style.colorScheme = 'light';
+    placeAutocomplete.style.border = '1px solid #a6a6acff';
+    placeAutocomplete.style.borderRadius = '8px';
+    
+    // Append to container
+    autocompleteContainerRef.current.appendChild(placeAutocomplete);
+
+    // Listen for place selection
+    const handlePlaceSelect = async (event: Event) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const selectEvent = event as any;
+      const placePrediction = selectEvent.placePrediction || selectEvent.detail?.placePrediction;
+      
+      if (!placePrediction) return;
+
+      const place = placePrediction.toPlace();
+      if (!place) return;
+
+      // Fetch place details with error handling
+      try {
+        await place.fetchFields({
+          fields: ['displayName', 'formattedAddress', 'location', 'addressComponents'],
+        });
+      } catch (error) {
+        console.error('Failed to fetch place details:', error);
+        return;
+      }
+
+      const location = place.location;
+      if (!location) return;
+
+      const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
+      const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
+      
+      if (typeof lat !== 'number' || typeof lng !== 'number') return;
+      
+      setMarker({ lat, lng });
+      setMapCenter({ lat, lng });
+      setZoom(17);
+
+      // Parse address components
+      if (place.addressComponents) {
+        const components = place.addressComponents.map((c: { longText?: string; shortText?: string; types?: string[] }) => ({
+          long_name: c.longText || '',
+          short_name: c.shortText || '',
+          types: c.types || [],
+        }));
+        const addressData = parseAddressComponents(components);
+        addressData.alamatLengkap = addressData.alamatLengkap || place.formattedAddress || '';
+        onLocationSelectRef.current(lat, lng, addressData);
+      } else {
+        onLocationSelectRef.current(lat, lng, {
+          alamatLengkap: place.formattedAddress || '',
+          kelurahan: '',
+          kecamatan: '',
+          kabupaten: '',
+          provinsi: '',
+          kodePos: '',
+        });
+      }
+    };
+
+    placeAutocomplete.addEventListener('gmp-select', handlePlaceSelect);
+
+    // Capture container ref for cleanup
+    const container = autocompleteContainerRef.current;
+
+    return () => {
+      // Cleanup - remove event listener and clear container
+      placeAutocomplete.removeEventListener('gmp-select', handlePlaceSelect);
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+  }, [isLoaded]);
 
   const onLoad = useCallback(() => {
     // Map loaded
@@ -70,9 +167,9 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
       if (status === 'OK' && results && results[0]) {
         const addressData = parseAddressComponents(results[0].address_components);
         addressData.alamatLengkap = addressData.alamatLengkap || results[0].formatted_address;
-        onLocationSelect(lat, lng, addressData);
+        onLocationSelectRef.current(lat, lng, addressData);
       } else {
-        onLocationSelect(lat, lng, {
+        onLocationSelectRef.current(lat, lng, {
           alamatLengkap: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
           kelurahan: '',
           kecamatan: '',
@@ -82,30 +179,7 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
         });
       }
     });
-  }, [onLocationSelect]);
-
-  const onAutocompleteLoad = (autocomplete: google.maps.places.Autocomplete) => {
-    autocompleteRef.current = autocomplete;
-  };
-
-  const onPlaceChanged = () => {
-    const place = autocompleteRef.current?.getPlace();
-    if (!place?.geometry?.location) return;
-
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-    
-    const newPos = { lat, lng };
-    setMarker(newPos);
-    setMapCenter(newPos);
-    setZoom(17);
-
-    if (place.address_components) {
-      const addressData = parseAddressComponents(place.address_components);
-      addressData.alamatLengkap = addressData.alamatLengkap || place.formatted_address || '';
-      onLocationSelect(lat, lng, addressData);
-    }
-  };
+  }, []);
 
   if (loadError) {
     return (
@@ -126,20 +200,10 @@ export default function MapPicker({ onLocationSelect, initialLat = -6.2088, init
   return (
     <div className="w-full h-72 rounded-lg overflow-hidden border border-gray-200 relative">
       <div className="absolute top-2 left-2 right-2 z-10">
-        <Autocomplete
-          onLoad={onAutocompleteLoad}
-          onPlaceChanged={onPlaceChanged}
-          options={{
-            componentRestrictions: { country: 'id' },
-            types: ['establishment', 'geocode'],
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Cari nama cafe, restoran, atau alamat..."
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg shadow-sm bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </Autocomplete>
+        <div 
+          ref={autocompleteContainerRef}
+          className="w-full [&_input]:w-full [&_input]:px-3 [&_input]:py-2 [&_input]:text-sm [&_input]:border [&_input]:border-gray-300 [&_input]:rounded-lg [&_input]:shadow-sm [&_input]:bg-white [&_input]:text-gray-900 [&_input]:placeholder:text-gray-400 [&_input]:focus:outline-none [&_input]:focus:ring-2 [&_input]:focus:ring-blue-500"
+        />
       </div>
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
