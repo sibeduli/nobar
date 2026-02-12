@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { coreApi } from '@/lib/midtrans';
+import { logActivity } from '@/lib/activity';
 
 // Called after successful payment to confirm and activate license
 export async function POST(
@@ -80,6 +81,14 @@ export async function POST(
           data: paymentData,
         });
 
+        // Log payment success activity
+        await logActivity({
+          userEmail: license.venue.email,
+          action: 'PAYMENT_SUCCESS',
+          description: `Pembayaran berhasil untuk venue: ${license.venue.businessName}`,
+          metadata: { venueId: license.venueId, venueName: license.venue.businessName, licenseId: id, orderId },
+        });
+
         return NextResponse.json({ success: true, license: updatedLicense });
       } else {
         return NextResponse.json(
@@ -96,6 +105,14 @@ export async function POST(
           status: 'paid',
           paidAt: new Date(),
         },
+      });
+
+      // Log payment success activity
+      await logActivity({
+        userEmail: license.venue.email,
+        action: 'PAYMENT_SUCCESS',
+        description: `Pembayaran berhasil untuk venue: ${license.venue.businessName}`,
+        metadata: { venueId: license.venueId, venueName: license.venue.businessName, licenseId: id },
       });
 
       return NextResponse.json({ success: true, license: updatedLicense, warning: 'Midtrans verification skipped' });

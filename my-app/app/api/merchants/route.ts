@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logActivity } from '@/lib/activity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +27,14 @@ export async function POST(request: NextRequest) {
         openingHour: body.openingHour || null,
         closingHour: body.closingHour || null,
       },
+    });
+
+    // Log activity
+    await logActivity({
+      userEmail: body.email,
+      action: 'VENUE_CREATE',
+      description: `Mendaftarkan venue baru: ${body.businessName}`,
+      metadata: { venueId: merchant.id, venueName: body.businessName },
     });
 
     return NextResponse.json({ success: true, merchant }, { status: 201 });

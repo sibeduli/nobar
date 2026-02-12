@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -22,6 +23,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             image: user.image || null,
             lastLoginAt: new Date(),
           },
+        });
+
+        // Log login activity
+        await logActivity({
+          userEmail: user.email,
+          action: 'LOGIN',
+          description: `Masuk ke akun dengan Google`,
         });
       }
       return true;

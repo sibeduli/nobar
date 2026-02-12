@@ -52,8 +52,8 @@ model License {
 }
 
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
+  id             String        @id @default(cuid())
+  email          String        @unique
   name           String?
   image          String?
   phone          String?
@@ -61,6 +61,22 @@ model User {
   companyName    String?
   companyRole    String?
   lastLoginAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  activities     ActivityLog[]
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+  userEmail   String
+  action      String   // e.g. "LOGIN", "LOGOUT", "VENUE_CREATE", "VENUE_UPDATE", "VENUE_DELETE", "LICENSE_CREATE", "PAYMENT_SUCCESS"
+  description String   // Human-readable description
+  metadata    Json?    // Additional data like venueId, licenseId, etc.
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userEmail])
+  @@index([createdAt])
 }

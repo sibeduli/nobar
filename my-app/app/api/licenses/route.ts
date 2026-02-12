@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logActivity } from '@/lib/activity';
 
 // Server-side pricing - cannot be tampered with
 const LICENSE_TIERS: Record<number, { price: number }> = {
@@ -77,6 +78,14 @@ export async function POST(request: NextRequest) {
         price: pricing.total, // Server-calculated total
         status: 'unpaid',
       },
+    });
+
+    // Log activity
+    await logActivity({
+      userEmail: venue.email,
+      action: 'LICENSE_CREATE',
+      description: `Membuat lisensi untuk venue: ${venue.businessName}`,
+      metadata: { venueId, venueName: venue.businessName, licenseId: license.id },
     });
 
     return NextResponse.json({ success: true, license, pricing }, { status: 201 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { logActivity } from '@/lib/activity';
 
 export async function GET(
   request: NextRequest,
@@ -97,6 +98,14 @@ export async function PATCH(
       data: body,
     });
 
+    // Log activity
+    await logActivity({
+      userEmail: session.user.email,
+      action: 'VENUE_UPDATE',
+      description: `Memperbarui venue: ${merchant.businessName}`,
+      metadata: { venueId: merchant.id, venueName: merchant.businessName },
+    });
+
     return NextResponse.json({ success: true, merchant });
   } catch (error) {
     console.error('Error updating merchant:', error);
@@ -150,8 +159,18 @@ export async function DELETE(
       );
     }
 
+    const venueName = existingMerchant.businessName;
+
     await prisma.merchant.delete({
       where: { id },
+    });
+
+    // Log activity
+    await logActivity({
+      userEmail: session.user.email,
+      action: 'VENUE_DELETE',
+      description: `Menghapus venue: ${venueName}`,
+      metadata: { venueId: id, venueName },
     });
 
     return NextResponse.json({ success: true });

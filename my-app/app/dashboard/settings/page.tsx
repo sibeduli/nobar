@@ -22,6 +22,15 @@ export default function SettingsPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const { showError, showSuccess, showWarning } = useAlert();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Error logging logout:', error);
+    }
+    signOut({ callbackUrl: '/login' });
+  };
   const profileCardRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -243,7 +252,7 @@ export default function SettingsPage() {
         <CardContent>
           <Button
             variant="outline"
-            onClick={() => signOut({ callbackUrl: '/login' })}
+            onClick={handleLogout}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
             <LogOut className="w-4 h-4 mr-2" />

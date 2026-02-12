@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/activity';
 
 // Get or create user profile
 export async function GET() {
@@ -72,6 +73,13 @@ export async function PUT(request: NextRequest) {
         companyRole: body.companyRole || null,
         lastLoginAt: new Date(),
       },
+    });
+
+    // Log activity
+    await logActivity({
+      userEmail: session.user.email,
+      action: 'PROFILE_UPDATE',
+      description: 'Memperbarui profil pengguna',
     });
 
     return NextResponse.json({ success: true, user });

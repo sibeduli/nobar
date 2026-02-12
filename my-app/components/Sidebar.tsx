@@ -22,6 +22,7 @@ import {
   ChevronDown,
   LogOut,
   QrCode,
+  Activity,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -62,6 +63,11 @@ const menuItems: MenuItem[] = [
     icon: <CreditCard className="w-5 h-5" />,
   },
   {
+    label: 'Aktivitas',
+    href: '/dashboard/activity',
+    icon: <Activity className="w-5 h-5" />,
+  },
+  {
     label: 'Pengaturan',
     href: '/dashboard/settings',
     icon: <Settings className="w-5 h-5" />,
@@ -89,6 +95,16 @@ export default function Sidebar({ children }: SidebarProps) {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      // Log logout activity before signing out
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Error logging logout:', error);
+    }
+    signOut({ callbackUrl: '/' });
+  };
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -277,7 +293,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={handleLogout}
                   className="h-7 px-2 text-gray-500 hover:text-red-600"
                 >
                   <LogOut className="w-4 h-4" />
@@ -336,7 +352,7 @@ export default function Sidebar({ children }: SidebarProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => signOut({ callbackUrl: '/' })}
+                  onClick={handleLogout}
                   className="h-7 px-2 text-gray-500 hover:text-red-600"
                 >
                   <LogOut className="w-4 h-4" />
@@ -352,7 +368,7 @@ export default function Sidebar({ children }: SidebarProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleLogout}
                 className="w-full justify-center text-gray-500 hover:text-red-600"
               >
                 <LogOut className="w-4 h-4" />
