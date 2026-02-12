@@ -24,6 +24,7 @@ import {
 import { Store, Plus, MapPin, Users, Eye, Pencil, Trash2, AlertTriangle, Search, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAlert } from '@/components/AlertModal';
 
 interface License {
   id: string;
@@ -97,6 +98,7 @@ interface Pagination {
 export default function VenuesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { showError } = useAlert();
   
   const [venues, setVenues] = useState<Venue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,11 +182,11 @@ export default function VenuesPage() {
         // Refresh current page
         fetchVenues(pagination.page, debouncedSearch, statusFilter);
       } else {
-        alert(data.error || 'Gagal menghapus venue');
+        showError(data.error || 'Gagal menghapus venue');
       }
     } catch (error) {
       console.error('Error deleting venue:', error);
-      alert('Gagal menghapus venue');
+      showError('Gagal menghapus venue');
     } finally {
       setIsDeleting(false);
     }

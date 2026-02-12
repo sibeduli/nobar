@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, CreditCard, Clock, Info } from 'lucide-react';
 import Link from 'next/link';
+import { useAlert } from '@/components/AlertModal';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
@@ -59,6 +60,7 @@ const formatPrice = (price: number) => {
 export default function DaftarVenuePage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { showError, showWarning } = useAlert();
   const [formData, setFormData] = useState({
     businessName: '',
     contactPerson: '',
@@ -116,11 +118,11 @@ export default function DaftarVenuePage() {
     
     // Validate required select fields
     if (!formData.venueType) {
-      alert('Silakan pilih jenis venue');
+      showWarning('Silakan pilih jenis venue');
       return;
     }
     if (!formData.capacity) {
-      alert('Silakan pilih kapasitas pengunjung');
+      showWarning('Silakan pilih kapasitas pengunjung');
       return;
     }
     
@@ -147,11 +149,11 @@ export default function DaftarVenuePage() {
         setSelectedTier(parseInt(formData.capacity) || 1);
         setShowPaymentModal(true);
       } else {
-        alert(data.error || 'Gagal mendaftar. Silakan coba lagi.');
+        showError(data.error || 'Gagal mendaftar. Silakan coba lagi.');
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      showError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsSubmitting(false);
     }

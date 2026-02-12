@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, LogOut, Save, Loader2 } from 'lucide-react';
+import { useAlert } from '@/components/AlertModal';
 
 interface UserProfile {
   phone: string;
@@ -20,6 +21,7 @@ interface UserProfile {
 export default function SettingsPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
+  const { showError, showSuccess, showWarning } = useAlert();
   const profileCardRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +78,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     // Validate all required fields
     if (!profile.phone || !profile.billingAddress || !profile.companyName || !profile.companyRole) {
-      alert('Semua field wajib diisi');
+      showWarning('Semua field wajib diisi');
       return;
     }
 
@@ -89,13 +91,13 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert('Profil berhasil disimpan');
+        showSuccess('Profil berhasil disimpan');
       } else {
-        alert(data.error || 'Gagal menyimpan profil');
+        showError(data.error || 'Gagal menyimpan profil');
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Gagal menyimpan profil');
+      showError('Gagal menyimpan profil');
     } finally {
       setIsSaving(false);
     }

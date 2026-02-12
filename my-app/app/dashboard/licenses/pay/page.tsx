@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { useAlert } from '@/components/AlertModal';
 
 declare global {
   interface Window {
@@ -79,6 +80,7 @@ interface UserProfile {
 export default function LicensePayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { showError, showWarning } = useAlert();
   const venueId = searchParams.get('venueId');
   const tierParam = searchParams.get('tier');
 
@@ -169,11 +171,11 @@ export default function LicensePayPage() {
       if (data.success) {
         router.push('/dashboard/venues');
       } else {
-        alert(data.error || 'Gagal menghapus venue');
+        showError(data.error || 'Gagal menghapus venue');
       }
     } catch (error) {
       console.error('Error deleting venue:', error);
-      alert('Gagal menghapus venue');
+      showError('Gagal menghapus venue');
     } finally {
       setIsDeleting(false);
     }
@@ -203,7 +205,7 @@ export default function LicensePayPage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading proforma:', error);
-      alert('Gagal mengunduh proforma. Silakan coba lagi.');
+      showError('Gagal mengunduh proforma. Silakan coba lagi.');
     } finally {
       setIsDownloadingProforma(false);
     }
@@ -214,7 +216,7 @@ export default function LicensePayPage() {
 
     // Check if profile is complete
     if (!profileComplete) {
-      alert('Silakan lengkapi profil Anda terlebih dahulu sebelum melakukan pembayaran.');
+      showWarning('Silakan lengkapi profil Anda terlebih dahulu sebelum melakukan pembayaran.');
       router.push('/dashboard/settings');
       return;
     }
@@ -233,7 +235,7 @@ export default function LicensePayPage() {
 
       const licenseData = await licenseRes.json();
       if (!licenseData.success) {
-        alert(licenseData.error || 'Gagal membuat lisensi');
+        showError(licenseData.error || 'Gagal membuat lisensi');
         setIsProcessing(false);
         return;
       }
@@ -271,7 +273,7 @@ export default function LicensePayPage() {
           },
           onError: (result) => {
             console.log('Payment error:', result);
-            alert('Pembayaran gagal. Silakan coba lagi.');
+            showError('Pembayaran gagal. Silakan coba lagi.');
             setIsProcessing(false);
           },
           onClose: () => {
@@ -280,12 +282,12 @@ export default function LicensePayPage() {
           },
         });
       } else {
-        alert(paymentData.error || 'Gagal membuat pembayaran');
+        showError(paymentData.error || 'Gagal membuat pembayaran');
         setIsProcessing(false);
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      showError('Terjadi kesalahan. Silakan coba lagi.');
       setIsProcessing(false);
     }
   };

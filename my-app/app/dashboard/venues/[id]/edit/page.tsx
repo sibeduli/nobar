@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useAlert } from '@/components/AlertModal';
 
 const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false });
 
@@ -28,6 +29,7 @@ const CAPACITY_TIERS = [
 ];
 
 export default function EditVenuePage() {
+  const { showError } = useAlert();
   const router = useRouter();
   const params = useParams();
   const venueId = params.id as string;
@@ -139,11 +141,11 @@ export default function EditVenuePage() {
       if (data.success) {
         router.push(`/dashboard/venues/${venueId}`);
       } else {
-        alert(data.error || 'Gagal menyimpan. Silakan coba lagi.');
+        showError(data.error || 'Gagal menyimpan. Silakan coba lagi.');
       }
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      showError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsSaving(false);
     }

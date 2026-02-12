@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, Clock, CreditCard, Building2, Download } from 'lucide-react';
 import Link from 'next/link';
+import { useAlert } from '@/components/AlertModal';
 
 interface License {
   id: string;
@@ -106,6 +107,7 @@ const formatDate = (dateString: string) => {
 export default function InvoicePage() {
   const params = useParams();
   const router = useRouter();
+  const { showError } = useAlert();
   const [license, setLicense] = useState<License | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,7 +169,7 @@ export default function InvoicePage() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error downloading invoice:', error);
-      alert('Gagal mengunduh invoice. Silakan coba lagi.');
+      showError('Gagal mengunduh invoice. Silakan coba lagi.');
     } finally {
       setIsDownloading(false);
     }
