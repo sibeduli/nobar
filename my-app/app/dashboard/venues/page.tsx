@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Store, Plus, MapPin, Users, Eye, Pencil, Trash2, AlertTriangle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Store, Plus, MapPin, Users, Eye, Pencil, Trash2, AlertTriangle, Search, ChevronLeft, ChevronRight, Calendar, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -47,6 +47,7 @@ interface Venue {
   kelurahan: string | null;
   alamatLengkap: string;
   createdAt: string;
+  updatedAt: string;
   license: License | null;
 }
 
@@ -76,6 +77,14 @@ const getLicenseBadge = (license: License | null) => {
     return { label: 'Berlisensi', variant: 'default' as const };
   }
   return { label: 'Belum Bayar', variant: 'secondary' as const };
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 };
 
 interface Pagination {
@@ -282,7 +291,7 @@ export default function VenuesPage() {
                       <p className="text-sm text-gray-500">
                         {venueTypeLabels[venue.venueType] || venue.venueType}
                       </p>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-4 h-4" />
                           {venue.kabupaten}, {venue.provinsi}
@@ -291,6 +300,16 @@ export default function VenuesPage() {
                           <Users className="w-4 h-4" />
                           {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
                         </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          Dibuat: {formatDate(venue.createdAt)}
+                        </span>
+                        {venue.updatedAt !== venue.createdAt && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            Diedit: {formatDate(venue.updatedAt)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
