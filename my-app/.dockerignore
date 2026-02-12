@@ -15,6 +15,7 @@ coverage
 # Environment files (will be mounted separately)
 .env
 .env.*
+!.env.production
 !.env.production.example
 
 # IDE
