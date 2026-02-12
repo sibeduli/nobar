@@ -166,12 +166,12 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Menunggu</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Belum Bayar</CardTitle>
             <Clock className="w-4 h-4 text-gray-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.stats.pendingLicenses || 0}</div>
-            <p className="text-xs text-gray-500 mt-1">Perlu tindakan</p>
+            <p className="text-xs text-gray-500 mt-1">Lisensi belum dibayar</p>
           </CardContent>
         </Card>
       </div>

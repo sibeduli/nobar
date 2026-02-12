@@ -80,7 +80,7 @@ interface UserProfile {
 export default function LicensePayPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { showError, showWarning } = useAlert();
+  const { showError, showWarning, showInfo } = useAlert();
   const venueId = searchParams.get('venueId');
   const tierParam = searchParams.get('tier');
 
@@ -276,8 +276,19 @@ export default function LicensePayPage() {
             showError('Pembayaran gagal. Silakan coba lagi.');
             setIsProcessing(false);
           },
-          onClose: () => {
+          onClose: async () => {
             console.log('Payment popup closed');
+            // Cancel the transaction in Midtrans
+            try {
+              await fetch(`/api/licenses/${licenseData.license.id}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: paymentData.order_id }),
+              });
+            } catch (e) {
+              console.error('Failed to cancel payment:', e);
+            }
+            showInfo('Pembayaran dibatalkan. Anda dapat mencoba lagi kapan saja.');
             setIsProcessing(false);
           },
         });
