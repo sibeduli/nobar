@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -57,17 +57,67 @@ export async function GET() {
       );
     }
 
-    // Only return venues owned by the current user
+    // Parse query params
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || 'all'; // all, licensed, unpaid, unlicensed
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const whereClause: {
+      email: string;
+      businessName?: { contains: string; mode: 'insensitive' };
+      license?: { status: string } | { isNot: null } | null;
+    } = {
+      email: session.user.email,
+    };
+
+    // Search filter
+    if (search) {
+      whereClause.businessName = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    // Status filter
+    if (status === 'licensed') {
+      whereClause.license = { status: 'paid' };
+    } else if (status === 'unpaid') {
+      whereClause.license = { status: 'pending' };
+    } else if (status === 'unlicensed') {
+      whereClause.license = null;
+    }
+
+    // Get total count for pagination
+    const total = await prisma.merchant.count({
+      where: whereClause,
+    });
+
+    // Get paginated merchants
     const merchants = await prisma.merchant.findMany({
-      where: {
-        email: session.user.email,
-      },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         license: true,
       },
+      skip,
+      take: limit,
     });
-    return NextResponse.json({ success: true, merchants });
+
+    return NextResponse.json({
+      success: true,
+      merchants,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching merchants:', error);
     return NextResponse.json(

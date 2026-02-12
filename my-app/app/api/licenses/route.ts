@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     
@@ -100,19 +100,71 @@ export async function GET() {
       );
     }
 
-    // Only return licenses for venues owned by the current user
-    const licenses = await prisma.license.findMany({
-      where: {
-        venue: {
-          email: session.user.email,
-        },
+    // Parse query params
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || 'all'; // all, paid, unpaid
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    type WhereClause = {
+      venue: {
+        email: string;
+        businessName?: { contains: string; mode: 'insensitive' };
+      };
+      status?: string;
+    };
+
+    const whereClause: WhereClause = {
+      venue: {
+        email: session.user.email,
       },
+    };
+
+    // Search filter
+    if (search) {
+      whereClause.venue.businessName = {
+        contains: search,
+        mode: 'insensitive',
+      };
+    }
+
+    // Status filter
+    if (status === 'paid') {
+      whereClause.status = 'paid';
+    } else if (status === 'unpaid') {
+      whereClause.status = 'unpaid';
+    }
+
+    // Get total count for pagination
+    const total = await prisma.license.count({
+      where: whereClause,
+    });
+
+    // Get paginated licenses
+    const licenses = await prisma.license.findMany({
+      where: whereClause,
       include: {
         venue: true,
       },
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
-    return NextResponse.json({ success: true, licenses });
+
+    return NextResponse.json({
+      success: true,
+      licenses,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('Error fetching licenses:', error);
     return NextResponse.json(

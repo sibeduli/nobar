@@ -86,7 +86,7 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
         width: 400,
         margin: 2,
         color: {
-          dark: '#1e40af',
+          dark: '#1c316b',
           light: '#ffffff',
         },
         errorCorrectionLevel: 'H',
@@ -99,6 +99,22 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
   };
 
   const handleDownload = () => {
+    if (!qrDataUrl || !license) return;
+
+    // Load TVRI logo first
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.onload = () => {
+      drawCertificate(logoImg);
+    };
+    logoImg.onerror = () => {
+      // Fallback: draw without logo
+      drawCertificate(null);
+    };
+    logoImg.src = '/TVRI-logo.svg';
+  };
+
+  const drawCertificate = (logoImg: HTMLImageElement | null) => {
     if (!qrDataUrl || !license) return;
 
     // Create a canvas with the full certificate design
@@ -116,29 +132,38 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
     ctx.fillRect(0, 0, width, height);
 
     // Top blue bar
-    ctx.fillStyle = '#1e40af';
+    ctx.fillStyle = '#1c316b';
     ctx.fillRect(0, 0, width, 8);
 
     // Border
-    ctx.strokeStyle = '#1e40af';
+    ctx.strokeStyle = '#1c316b';
     ctx.lineWidth = 3;
     ctx.strokeRect(1.5, 1.5, width - 3, height - 3);
 
     // Logo section
-    ctx.fillStyle = '#1e40af';
-    ctx.fillRect(20, 24, 36, 36);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('TV', 38, 48);
-
-    ctx.fillStyle = '#1e40af';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('TVRI Nobar', 66, 40);
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '10px Arial';
-    ctx.fillText('Lisensi Resmi', 66, 54);
+    if (logoImg) {
+      // Draw TVRI logo (scale to fit height of 36px)
+      const logoHeight = 36;
+      const logoWidth = (logoImg.width / logoImg.height) * logoHeight;
+      ctx.drawImage(logoImg, 20, 24, logoWidth, logoHeight);
+      
+      ctx.fillStyle = '#1c316b';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('Nobar', 20 + logoWidth + 8, 40);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '10px Arial';
+      ctx.fillText('Lisensi Resmi', 20 + logoWidth + 8, 54);
+    } else {
+      // Fallback text logo
+      ctx.fillStyle = '#1c316b';
+      ctx.font = 'bold 16px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText('TVRI Nobar', 20, 40);
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '10px Arial';
+      ctx.fillText('Lisensi Resmi', 20, 54);
+    }
 
     // Licensed badge
     ctx.fillStyle = '#dcfce7';
@@ -165,7 +190,7 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
     ctx.fillText(VENUE_TYPE_LABELS[license.venue.venueType] || license.venue.venueType, width / 2, 134);
 
     // QR Code background
-    ctx.fillStyle = '#1e40af';
+    ctx.fillStyle = '#1c316b';
     ctx.fillRect(0, 150, width, 220);
 
     // Load and draw QR code
@@ -194,8 +219,8 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       ctx.font = '12px Arial';
       ctx.fillText(`${license.venue.kabupaten}, ${license.venue.provinsi}`, 30, 412);
 
-      // Tier section
-      ctx.fillStyle = '#eff6ff';
+      // Tier section - use TVRI brand color with 10% opacity approximation
+      ctx.fillStyle = '#e8ebf2';
       roundRect(ctx, 20, 430, width - 40, 40, 6);
       ctx.fill();
       
@@ -203,7 +228,7 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       ctx.fillStyle = '#6b7280';
       ctx.font = '9px Arial';
       ctx.fillText('KAPASITAS LISENSI', 30, 448);
-      ctx.fillStyle = '#1e40af';
+      ctx.fillStyle = '#1c316b';
       ctx.font = 'bold 14px Arial';
       ctx.fillText(tierData?.label || `Tier ${license.tier}`, 30, 464);
       ctx.font = '12px Arial';
@@ -284,19 +309,17 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       </div>
 
       {/* QR Card Preview */}
-      <Card className="overflow-hidden border-2 border-blue-600">
+      <Card className="overflow-hidden border-2 border-[#1c316b]">
         {/* Top bar */}
-        <div className="h-2 bg-blue-600" />
+        <div className="h-2 bg-[#1c316b]" />
         
         <CardContent className="p-5">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TV</span>
-              </div>
+              <img src="/TVRI-logo.svg" alt="TVRI" className="h-9 w-auto" />
               <div>
-                <p className="font-bold text-blue-600 text-sm">TVRI Nobar</p>
+                <p className="font-bold text-[#1c316b] text-sm">Nobar</p>
                 <p className="text-xs text-gray-500">Lisensi Resmi</p>
               </div>
             </div>
@@ -317,7 +340,7 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
           </div>
 
           {/* QR Code */}
-          <div className="bg-blue-600 -mx-5 py-5 mb-4">
+          <div className="bg-[#1c316b] -mx-5 py-5 mb-4">
             <div className="flex justify-center">
               <div className="bg-white p-2 rounded-lg">
                 {qrDataUrl ? (
@@ -337,12 +360,12 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
           </div>
 
           {/* Tier */}
-          <div className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+          <div className="bg-[#1c316b]/10 rounded-lg p-3 flex items-center justify-between">
             <div>
               <p className="text-xs text-gray-500">Kapasitas Lisensi</p>
-              <p className="font-bold text-blue-600">{tierData?.label}</p>
+              <p className="font-bold text-[#1c316b]">{tierData?.label}</p>
             </div>
-            <p className="text-blue-600">{tierData?.description}</p>
+            <p className="text-[#1c316b]">{tierData?.description}</p>
           </div>
 
           {/* Footer */}
@@ -353,7 +376,7 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       </Card>
 
       {/* Download Button */}
-      <Button onClick={handleDownload} size="lg" className="w-full">
+      <Button onClick={handleDownload} size="lg" className="w-full bg-[#1c316b] hover:bg-[#1c316b]/90">
         <Download className="w-4 h-4 mr-2" />
         Unduh QR Lisensi
       </Button>

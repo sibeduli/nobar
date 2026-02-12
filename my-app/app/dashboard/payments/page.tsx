@@ -1,10 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { CreditCard, CheckCircle, Clock, AlertCircle, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -57,6 +65,13 @@ const formatDate = (dateString: string) => {
   });
 };
 
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export default function PaymentsPage() {
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
@@ -64,15 +79,31 @@ export default function PaymentsPage() {
 
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Pagination and filter state
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
+  // Debounce search input
   useEffect(() => {
-    syncAndFetchLicenses();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const syncAndFetchLicenses = async () => {
+  const fetchLicenses = useCallback(async (page: number, search: string, paymentStatus: string) => {
+    setIsLoading(true);
     try {
-      // First, fetch all licenses
-      const res = await fetch('/api/licenses');
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: '10',
+        search,
+        status: paymentStatus,
+      });
+      const res = await fetch(`/api/licenses?${params}`);
       const data = await res.json();
       
       if (data.success) {
@@ -94,15 +125,17 @@ export default function PaymentsPage() {
           }
         }
         
-        // Re-fetch to get updated statuses
+        // Re-fetch to get updated statuses if we synced any
         if (unpaidWithOrderId.length > 0) {
-          const refreshRes = await fetch('/api/licenses');
+          const refreshRes = await fetch(`/api/licenses?${params}`);
           const refreshData = await refreshRes.json();
           if (refreshData.success) {
             setLicenses(refreshData.licenses);
+            setPagination(refreshData.pagination);
           }
         } else {
           setLicenses(data.licenses);
+          setPagination(data.pagination);
         }
       }
     } catch (error) {
@@ -110,6 +143,24 @@ export default function PaymentsPage() {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchLicenses(pagination.page, debouncedSearch, statusFilter);
+  }, [pagination.page, debouncedSearch, statusFilter, fetchLicenses]);
+
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const paidLicenses = licenses.filter(l => l.status === 'paid');
@@ -119,8 +170,37 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Pembayaran</h1>
-        <p className="text-gray-500 mt-1">Riwayat pembayaran dan tagihan</p>
+        <p className="text-gray-500 mt-1">
+          {pagination.total > 0 
+            ? `${pagination.total} transaksi`
+            : 'Riwayat pembayaran dan tagihan'}
+        </p>
       </div>
+
+      {/* Search and Filter */}
+      <Card className="p-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Cari nama venue..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 bg-white"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full sm:w-[180px] bg-white">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="paid">Lunas</SelectItem>
+              <SelectItem value="unpaid">Belum Bayar</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
 
       {/* Payment Status Alert */}
       {status === 'success' && (
@@ -258,6 +338,62 @@ export default function PaymentsPage() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Pagination */}
+          {pagination.total > 0 && (
+            <Card className="p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="text-sm text-gray-600">
+                  <p>
+                    Menampilkan <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> - <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> dari <span className="font-medium">{pagination.total}</span> transaksi
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Halaman {pagination.page} dari {pagination.totalPages} • {pagination.limit} per halaman
+                  </p>
+                </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                    .filter(page => {
+                      const current = pagination.page;
+                      return page === 1 || page === pagination.totalPages || Math.abs(page - current) <= 1;
+                    })
+                    .map((page, index, arr) => (
+                      <span key={page} className="flex items-center">
+                        {index > 0 && arr[index - 1] !== page - 1 && (
+                          <span className="px-2 text-gray-400">...</span>
+                        )}
+                        <Button
+                          variant={pagination.page === page ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => handlePageChange(page)}
+                          className={pagination.page === page ? 'bg-[#1c316b] hover:bg-[#1c316b]/90' : ''}
+                        >
+                          {page}
+                        </Button>
+                      </span>
+                    ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+              </div>
+            </Card>
           )}
         </div>
       )}
