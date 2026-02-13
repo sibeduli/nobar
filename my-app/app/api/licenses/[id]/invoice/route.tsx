@@ -9,7 +9,23 @@ import {
   Text,
   View,
   StyleSheet,
+  Image,
 } from '@react-pdf/renderer';
+import path from 'path';
+import fs from 'fs';
+
+// Get TVRI logo as base64 for PDF embedding (PNG format for react-pdf compatibility)
+const getLogoBase64 = () => {
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'TVRI-logo.png');
+    const logoBuffer = fs.readFileSync(logoPath);
+    return `data:image/png;base64,${logoBuffer.toString('base64')}`;
+  } catch {
+    return null;
+  }
+};
+
+const logoBase64 = getLogoBase64();
 
 // Server-side pricing
 const LICENSE_TIERS: Record<number, { label: string; basePrice: number }> = {
@@ -64,13 +80,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 30,
     borderBottomWidth: 2,
-    borderBottomColor: '#2563eb',
+    borderBottomColor: '#1e3a5f',
     paddingBottom: 20,
   },
   logo: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb',
+    color: '#1e3a5f',
   },
   logoSubtitle: {
     fontSize: 8,
@@ -280,9 +296,14 @@ const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.logo}>TVRI Nobar</Text>
-            <Text style={styles.logoSubtitle}>Merchant Licensing Portal</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {logoBase64 && (
+              <Image src={logoBase64} style={{ width: 40, height: 24 }} />
+            )}
+            <View>
+              <Text style={styles.logo}>Nobar</Text>
+              <Text style={styles.logoSubtitle}>Merchant Licensing Portal</Text>
+            </View>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
@@ -411,7 +432,7 @@ const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Terima kasih telah menggunakan layanan TVRI Nobar</Text>
+          <Text style={styles.footerText}>Terima kasih telah menggunakan layanan Nobar</Text>
           <Text style={styles.footerText}>Untuk pertanyaan, hubungi support@tvrinobar.id</Text>
         </View>
       </Page>

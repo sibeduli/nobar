@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TVRI Nobar - Daftar Venue",
+  title: "Nobar - Daftar Venue",
   description: "Daftar venue untuk lisensi nobar Piala Dunia 2026",
+  icons: {
+    icon: "/favicon-TVRI.png",
+  },
 };
 
 export default function RootLayout({

@@ -235,14 +235,14 @@ export default function InvoicePage() {
         <CardHeader className="border-b">
           <div className="flex items-start justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
+              <div className="flex items-center gap-3 mb-2">
+                <img 
+                  src="/TVRI-logo.png" 
+                  alt="TVRI Logo" 
+                  className="h-10 w-auto"
+                />
                 <div>
-                  <h2 className="font-bold text-gray-900">TVRI Nobar</h2>
+                  <h2 className="font-bold text-gray-900">Nobar</h2>
                   <p className="text-xs text-gray-500">Merchant Licensing Portal</p>
                 </div>
               </div>
