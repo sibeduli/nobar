@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   description: "Daftar venue untuk lisensi nobar Piala Dunia 2026",
   icons: {
     icon: "/favicon-TVRI.png",
+    apple: "/favicon-TVRI.png",
   },
 };
 
