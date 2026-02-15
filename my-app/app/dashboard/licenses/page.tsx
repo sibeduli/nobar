@@ -270,30 +270,28 @@ export default function LicensesPage() {
               const venueTier = getTierByValue(venue.capacity);
               return (
                 <Card key={venue.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-4">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Store className="w-6 h-6 text-gray-400" />
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
-                                                      </div>
-                          <p className="text-sm text-gray-500">
-                            {venueTypeLabels[venue.venueType] || venue.venueType} • {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
-                          </p>
-                          <p className="text-sm text-blue-600">
-                            {venueTier.label} ({venueTier.description}) - Total: {formatPrice(calculateTotal(venueTier.price).total)}
-                          </p>
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Store className="w-5 h-5 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {venueTypeLabels[venue.venueType] || venue.venueType} • {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
+                        </p>
+                        <p className="text-sm text-blue-600">
+                          {venueTier.label} ({venueTier.description}) - Total: {formatPrice(calculateTotal(venueTier.price).total)}
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <Link href={`/dashboard/licenses/pay?venueId=${venue.id}&tier=${venueTier.tier}`}>
+                            <Button size="sm">
+                              <CreditCard className="w-4 h-4 mr-2" />
+                              Beli Lisensi
+                            </Button>
+                          </Link>
                         </div>
                       </div>
-                      <Link href={`/dashboard/licenses/pay?venueId=${venue.id}&tier=${venueTier.tier}`}>
-                        <Button>
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Beli Lisensi
-                        </Button>
-                      </Link>
                     </div>
                   </CardContent>
                 </Card>
