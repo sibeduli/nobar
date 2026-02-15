@@ -224,28 +224,13 @@ export default function LicensePayPage() {
     setIsProcessing(true);
 
     try {
-      // Create license record - backend calculates tier and price from venue
-      const licenseRes = await fetch('/api/licenses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          venueId: venue.id,
-        }),
-      });
-
-      const licenseData = await licenseRes.json();
-      if (!licenseData.success) {
-        showError(licenseData.error || 'Gagal membuat lisensi');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Create payment - backend calculates all amounts server-side
+      // Create payment - License will be created on successful payment
       const paymentRes = await fetch('/api/licenses/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          licenseId: licenseData.license.id,
+          venueId: venue.id,
+          tier: selectedTier,
         }),
       });
 
@@ -255,27 +240,24 @@ export default function LicensePayPage() {
         window.snap.pay(paymentData.token, {
           onSuccess: async (result) => {
             console.log('Payment success:', result);
-            // Confirm and activate license
+            // Confirm payment and create license
             try {
-              const confirmRes = await fetch(`/api/licenses/${licenseData.license.id}/confirm`, {
+              const confirmRes = await fetch(`/api/licenses/${venue.id}/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId: paymentData.order_id }),
               });
               const confirmData = await confirmRes.json();
-              if (!confirmData.success) {
-                console.error('License confirmation failed:', confirmData.error);
-                // Still redirect with processing status - webhook will handle activation
-                router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=processing`);
+              if (confirmData.success && confirmData.license) {
+                router.push(`/dashboard/payments/invoice/${confirmData.license.id}?status=success`);
                 return;
               }
+              // Fallback - webhook will handle license creation
+              router.push(`/dashboard/payments?status=processing&order_id=${paymentData.order_id}`);
             } catch (e) {
               console.error('Failed to confirm license:', e);
-              // Still redirect with processing status - webhook will handle activation
-              router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=processing`);
-              return;
+              router.push(`/dashboard/payments?status=processing&order_id=${paymentData.order_id}`);
             }
-            router.push(`/dashboard/payments/invoice/${licenseData.license.id}?status=success`);
           },
           onPending: (result) => {
             console.log('Payment pending:', result);
@@ -290,7 +272,7 @@ export default function LicensePayPage() {
             console.log('Payment popup closed');
             // Cancel the transaction in Midtrans
             try {
-              await fetch(`/api/licenses/${licenseData.license.id}/cancel`, {
+              await fetch(`/api/licenses/${venue.id}/cancel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderId: paymentData.order_id }),

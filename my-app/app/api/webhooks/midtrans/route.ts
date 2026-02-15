@@ -25,12 +25,15 @@ const calculateTotalPrice = (tier: number) => {
 };
 
 // Parse order_id format: NOBAR-{venueId}-{tier}-{timestamp}
+// venueId is a cuid which doesn't contain dashes, so we can safely use regex
 const parseOrderId = (orderId: string) => {
-  const parts = orderId.split('-');
-  if (parts.length < 4 || parts[0] !== 'NOBAR') return null;
+  // Format: NOBAR-{venueId}-{tier}-{timestamp}
+  // Example: NOBAR-cmlniy0se0005ogsonwo22siw-2-1739612345678
+  const match = orderId.match(/^NOBAR-([a-z0-9]+)-(\d+)-(\d+)$/);
+  if (!match) return null;
   return {
-    venueId: parts[1],
-    tier: parseInt(parts[2], 10),
+    venueId: match[1],
+    tier: parseInt(match[2], 10),
   };
 };
 

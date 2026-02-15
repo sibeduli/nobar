@@ -34,9 +34,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { venueId } = body;
+    const { venueId, tier } = body;
 
-    // Fetch venue to get tier
+    console.log('[PAY] Request body:', { venueId, tier });
+
+    if (!venueId || !tier) {
+      return NextResponse.json({ error: 'venueId and tier are required' }, { status: 400 });
+    }
+
+    // Validate tier
+    if (tier < 1 || tier > 5) {
+      return NextResponse.json({ error: 'Invalid tier (must be 1-5)' }, { status: 400 });
+    }
+
+    // Fetch venue
     const venue = await prisma.merchant.findUnique({
       where: { id: venueId },
       include: { license: true },
@@ -56,8 +67,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Venue sudah memiliki lisensi aktif' }, { status: 400 });
     }
 
-    const tier = venue.capacity;
-
     // Calculate price server-side based on tier - ignore any amount from client
     const pricing = calculateTotalPrice(tier);
     if (!pricing) {
@@ -66,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique order ID that encodes venueId and tier for webhook processing
     const orderId = `NOBAR-${venueId}-${tier}-${Date.now()}`;
+    console.log('[PAY] Generated orderId:', orderId, 'venueId:', venueId, 'tier:', tier);
 
     const parameter = {
       transaction_details: {
@@ -97,7 +107,7 @@ export async function POST(request: NextRequest) {
         },
       ],
       callbacks: {
-        finish: `${process.env.NEXTAUTH_URL}/dashboard/payments?order_id=${orderId}`,
+        finish: `${process.env.NEXTAUTH_URL}/dashboard/payments?order_id=${orderId}&status=processing`,
       },
     };
 

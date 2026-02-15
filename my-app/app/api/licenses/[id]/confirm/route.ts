@@ -26,12 +26,15 @@ const calculateTotalPrice = (tier: number) => {
 };
 
 // Parse order_id format: NOBAR-{venueId}-{tier}-{timestamp}
+// venueId is a cuid which doesn't contain dashes, so we can safely split
 const parseOrderId = (orderId: string) => {
-  const parts = orderId.split('-');
-  if (parts.length < 4 || parts[0] !== 'NOBAR') return null;
+  // Format: NOBAR-{venueId}-{tier}-{timestamp}
+  // Example: NOBAR-cmlniy0se0005ogsonwo22siw-2-1739612345678
+  const match = orderId.match(/^NOBAR-([a-z0-9]+)-(\d+)-(\d+)$/);
+  if (!match) return null;
   return {
-    venueId: parts[1],
-    tier: parseInt(parts[2], 10),
+    venueId: match[1],
+    tier: parseInt(match[2], 10),
   };
 };
 
@@ -47,9 +50,14 @@ export async function POST(
     const body = await request.json();
     const { orderId } = body;
 
+    console.log('[CONFIRM] Starting confirmation for venueId:', venueId, 'orderId:', orderId);
+
     // Parse order_id to verify it matches the venue
     const orderData = parseOrderId(orderId);
+    console.log('[CONFIRM] Parsed orderData:', orderData);
+    
     if (!orderData || orderData.venueId !== venueId) {
+      console.log('[CONFIRM] Order validation failed. orderData.venueId:', orderData?.venueId, 'expected venueId:', venueId);
       return NextResponse.json(
         { success: false, error: 'Invalid order' },
         { status: 400 }
@@ -86,10 +94,14 @@ export async function POST(
     try {
       const statusResponse = await coreApi.transaction.status(orderId);
       
-      if (
+      // Accept 'capture', 'settlement', or 'pending' - onSuccess callback fires before Midtrans fully settles
+      // In sandbox, credit card payments return 'capture', VA returns 'pending' then 'settlement'
+      const isSuccessful = 
         statusResponse.transaction_status === 'capture' ||
-        statusResponse.transaction_status === 'settlement'
-      ) {
+        statusResponse.transaction_status === 'settlement' ||
+        statusResponse.transaction_status === 'pending';
+      
+      if (isSuccessful) {
         const price = calculateTotalPrice(orderData.tier);
         if (!price) {
           return NextResponse.json({ success: false, error: 'Invalid tier' }, { status: 400 });
@@ -110,7 +122,7 @@ export async function POST(
               transactionStatus: statusResponse.transaction_status,
               transactionTime: statusResponse.transaction_time ? new Date(statusResponse.transaction_time) : null,
               grossAmount: statusResponse.gross_amount,
-              bank: statusResponse.va_numbers?.[0]?.bank || statusResponse.permata_va_number ? 'permata' : null,
+              bank: statusResponse.va_numbers?.[0]?.bank || (statusResponse.permata_va_number ? 'permata' : null),
               vaNumber: statusResponse.va_numbers?.[0]?.va_number || statusResponse.permata_va_number || null,
               cardType: statusResponse.card_type || null,
               maskedCard: statusResponse.masked_card || null,

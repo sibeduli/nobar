@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreditCard, CheckCircle, Clock, AlertCircle, FileText, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CreditCard, CheckCircle, Clock, AlertCircle, FileText, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useAlert } from '@/components/AlertModal';
 
 interface License {
   id: string;
@@ -74,16 +75,59 @@ interface Pagination {
 
 export default function PaymentsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { showSuccess, showError } = useAlert();
   const status = searchParams.get('status');
   const orderId = searchParams.get('order_id');
 
   const [licenses, setLicenses] = useState<License[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const hasConfirmedRef = useRef(false);
   
   // Pagination and filter state
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  // Handle payment confirmation when redirected from Midtrans
+  useEffect(() => {
+    const confirmPayment = async () => {
+      // Only attempt confirmation if we have an orderId and status is processing/pending
+      if (!orderId || hasConfirmedRef.current) return;
+      if (status !== 'processing' && status !== 'pending') return;
+
+      hasConfirmedRef.current = true;
+      setIsConfirming(true);
+
+      try {
+        console.log('[PAYMENTS] Confirming payment for orderId:', orderId);
+        const res = await fetch('/api/licenses/check-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId }),
+        });
+        const data = await res.json();
+        console.log('[PAYMENTS] Check-status response:', data);
+
+        if (data.success && data.license) {
+          showSuccess('Pembayaran berhasil! Lisensi telah aktif.');
+          // Redirect to invoice page
+          router.replace(`/dashboard/payments/invoice/${data.license.id}?status=success`);
+          return;
+        } else if (data.error) {
+          console.error('[PAYMENTS] Confirmation error:', data.error);
+        }
+      } catch (error) {
+        console.error('[PAYMENTS] Failed to confirm payment:', error);
+      } finally {
+        setIsConfirming(false);
+      }
+    };
+
+    confirmPayment();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, status]);
 
   // Debounce search input
   useEffect(() => {
@@ -131,6 +175,17 @@ export default function PaymentsPage() {
   // All licenses are active (License only exists after payment succeeds)
   const activeLicenses = licenses;
 
+  // Show loading state while confirming payment
+  if (isConfirming) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
+        <p className="text-gray-600 font-medium">Mengkonfirmasi pembayaran...</p>
+        <p className="text-gray-400 text-sm mt-1">Mohon tunggu sebentar</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -170,7 +225,7 @@ export default function PaymentsPage() {
         </Card>
       )}
 
-      {status === 'pending' && (
+      {(status === 'pending' || status === 'processing') && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="flex items-center gap-4 py-4">
             <Clock className="w-8 h-8 text-yellow-600" />
