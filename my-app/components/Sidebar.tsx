@@ -23,6 +23,7 @@ import {
   LogOut,
   QrCode,
   Activity,
+  MessageSquare,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -66,6 +67,11 @@ const menuItems: MenuItem[] = [
     label: 'Aktivitas',
     href: '/dashboard/activity',
     icon: <Activity className="w-5 h-5" />,
+  },
+  {
+    label: 'Pengaduan',
+    href: '/dashboard/pengaduan',
+    icon: <MessageSquare className="w-5 h-5" />,
   },
   {
     label: 'Pengaturan',
