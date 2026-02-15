@@ -20,7 +20,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
 }
 
@@ -148,8 +148,8 @@ export default function LicensesPage() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const licensedVenues = venues.filter(v => v.license?.status === 'paid');
-  const unlicensedVenues = venues.filter(v => !v.license || v.license.status !== 'paid');
+  const licensedVenues = venues.filter(v => v.license);
+  const unlicensedVenues = venues.filter(v => !v.license);
 
   return (
     <div className="space-y-6">
@@ -181,7 +181,6 @@ export default function LicensesPage() {
             <SelectContent>
               <SelectItem value="all">Semua Status</SelectItem>
               <SelectItem value="licensed">Berlisensi</SelectItem>
-              <SelectItem value="unpaid">Belum Bayar</SelectItem>
               <SelectItem value="unlicensed">Belum Berlisensi</SelectItem>
             </SelectContent>
           </Select>
@@ -282,10 +281,7 @@ export default function LicensesPage() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
-                            {venue.license?.status === 'unpaid' && (
-                              <Badge variant="secondary">Belum Bayar</Badge>
-                            )}
-                          </div>
+                                                      </div>
                           <p className="text-sm text-gray-500">
                             {venueTypeLabels[venue.venueType] || venue.venueType} • {capacityTierLabels[venue.capacity] || `Tier ${venue.capacity}`}
                           </p>

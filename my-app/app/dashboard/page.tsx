@@ -18,7 +18,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   createdAt: string;
   venue: {
     businessName: string;
@@ -166,7 +166,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Belum Bayar</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Lisensi Belum Aktif</CardTitle>
             <Clock className="w-4 h-4 text-gray-400" />
           </CardHeader>
           <CardContent>
@@ -255,8 +255,8 @@ export default function DashboardPage() {
                         <p className="text-sm text-gray-500">Tier {license.tier} • {formatCurrency(license.price)}</p>
                       </div>
                     </div>
-                    <Badge variant={license.status === 'paid' ? 'default' : 'secondary'}>
-                      {license.status === 'paid' ? 'Lunas' : 'Pending'}
+                    <Badge variant="default">
+                      Berlisensi
                     </Badge>
                   </Link>
                 ))}

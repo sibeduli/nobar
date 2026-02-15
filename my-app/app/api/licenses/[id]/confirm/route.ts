@@ -4,36 +4,82 @@ import { auth } from '@/lib/auth';
 import { coreApi } from '@/lib/midtrans';
 import { logActivity } from '@/lib/activity';
 
-// Called after successful payment to confirm and activate license
+// Server-side pricing for license creation
+const LICENSE_TIERS: Record<number, { price: number }> = {
+  1: { price: 5000000 },
+  2: { price: 10000000 },
+  3: { price: 20000000 },
+  4: { price: 40000000 },
+  5: { price: 100000000 },
+};
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12;
+
+const calculateTotalPrice = (tier: number) => {
+  const tierData = LICENSE_TIERS[tier];
+  if (!tierData) return null;
+  const basePrice = tierData.price;
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  return total;
+};
+
+// Parse order_id format: NOBAR-{venueId}-{tier}-{timestamp}
+const parseOrderId = (orderId: string) => {
+  const parts = orderId.split('-');
+  if (parts.length < 4 || parts[0] !== 'NOBAR') return null;
+  return {
+    venueId: parts[1],
+    tier: parseInt(parts[2], 10),
+  };
+};
+
+// Called after successful payment to confirm and create license
+// The {id} param is now venueId for consistency
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id: venueId } = await params;
     const session = await auth();
     const body = await request.json();
     const { orderId } = body;
 
-    // Find the license with venue info
-    const license = await prisma.license.findUnique({
-      where: { id },
-      include: { venue: true },
+    // Parse order_id to verify it matches the venue
+    const orderData = parseOrderId(orderId);
+    if (!orderData || orderData.venueId !== venueId) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid order' },
+        { status: 400 }
+      );
+    }
+
+    // Find the venue
+    const venue = await prisma.merchant.findUnique({
+      where: { id: venueId },
+      include: { license: true },
     });
 
-    if (!license) {
+    if (!venue) {
       return NextResponse.json(
-        { success: false, error: 'License tidak ditemukan' },
+        { success: false, error: 'Venue tidak ditemukan' },
         { status: 404 }
       );
     }
 
-    // Check ownership
-    if (session?.user?.email && license.venue.email !== session.user.email) {
+    // Check ownership - require auth
+    if (!session?.user?.email || venue.email !== session.user.email) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }
       );
+    }
+
+    // Check if license already exists (idempotency)
+    if (venue.license) {
+      return NextResponse.json({ success: true, license: venue.license, message: 'License already exists' });
     }
 
     // Verify with Midtrans that payment is actually successful
@@ -44,52 +90,50 @@ export async function POST(
         statusResponse.transaction_status === 'capture' ||
         statusResponse.transaction_status === 'settlement'
       ) {
-        // Extract payment details from Midtrans response
-        const paymentData: Record<string, unknown> = {
-          status: 'paid',
-          paidAt: new Date(),
-          transactionId: statusResponse.transaction_id,
-          paymentType: statusResponse.payment_type,
-          transactionStatus: statusResponse.transaction_status,
-          transactionTime: statusResponse.transaction_time ? new Date(statusResponse.transaction_time) : null,
-          grossAmount: statusResponse.gross_amount,
-        };
-
-        // Add bank transfer details
-        if (statusResponse.va_numbers && statusResponse.va_numbers.length > 0) {
-          paymentData.bank = statusResponse.va_numbers[0].bank;
-          paymentData.vaNumber = statusResponse.va_numbers[0].va_number;
-        }
-        
-        // Add permata VA
-        if (statusResponse.permata_va_number) {
-          paymentData.bank = 'permata';
-          paymentData.vaNumber = statusResponse.permata_va_number;
+        const price = calculateTotalPrice(orderData.tier);
+        if (!price) {
+          return NextResponse.json({ success: false, error: 'Invalid tier' }, { status: 400 });
         }
 
-        // Add credit card details
-        if (statusResponse.card_type) {
-          paymentData.cardType = statusResponse.card_type;
+        // Create license (handle race condition with unique constraint)
+        let license;
+        try {
+          license = await prisma.license.create({
+            data: {
+              venueId: venue.id,
+              tier: orderData.tier,
+              price,
+              paidAt: new Date(),
+              midtransId: orderId,
+              transactionId: statusResponse.transaction_id,
+              paymentType: statusResponse.payment_type,
+              transactionStatus: statusResponse.transaction_status,
+              transactionTime: statusResponse.transaction_time ? new Date(statusResponse.transaction_time) : null,
+              grossAmount: statusResponse.gross_amount,
+              bank: statusResponse.va_numbers?.[0]?.bank || statusResponse.permata_va_number ? 'permata' : null,
+              vaNumber: statusResponse.va_numbers?.[0]?.va_number || statusResponse.permata_va_number || null,
+              cardType: statusResponse.card_type || null,
+              maskedCard: statusResponse.masked_card || null,
+            },
+          });
+        } catch (createError: unknown) {
+          // Handle race condition - license already created by webhook/another request
+          if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+            const existingLicense = await prisma.license.findUnique({ where: { venueId: venue.id } });
+            return NextResponse.json({ success: true, license: existingLicense, message: 'License already exists' });
+          }
+          throw createError;
         }
-        if (statusResponse.masked_card) {
-          paymentData.maskedCard = statusResponse.masked_card;
-        }
-
-        // Payment confirmed - activate license with details
-        const updatedLicense = await prisma.license.update({
-          where: { id },
-          data: paymentData,
-        });
 
         // Log payment success activity
         await logActivity({
-          userEmail: license.venue.email,
+          userEmail: venue.email,
           action: 'PAYMENT_SUCCESS',
-          description: `Pembayaran berhasil untuk venue: ${license.venue.businessName}`,
-          metadata: { venueId: license.venueId, venueName: license.venue.businessName, licenseId: id, orderId },
+          description: `Pembayaran berhasil untuk venue: ${venue.businessName}`,
+          metadata: { venueId: venue.id, venueName: venue.businessName, licenseId: license.id, orderId },
         });
 
-        return NextResponse.json({ success: true, license: updatedLicense });
+        return NextResponse.json({ success: true, license });
       } else {
         return NextResponse.json(
           { success: false, error: 'Payment not confirmed', status: statusResponse.transaction_status },
@@ -98,24 +142,10 @@ export async function POST(
       }
     } catch (midtransError) {
       console.error('Midtrans verification error:', midtransError);
-      // If Midtrans verification fails, still try to update (for sandbox testing)
-      const updatedLicense = await prisma.license.update({
-        where: { id },
-        data: {
-          status: 'paid',
-          paidAt: new Date(),
-        },
-      });
-
-      // Log payment success activity
-      await logActivity({
-        userEmail: license.venue.email,
-        action: 'PAYMENT_SUCCESS',
-        description: `Pembayaran berhasil untuk venue: ${license.venue.businessName}`,
-        metadata: { venueId: license.venueId, venueName: license.venue.businessName, licenseId: id },
-      });
-
-      return NextResponse.json({ success: true, license: updatedLicense, warning: 'Midtrans verification skipped' });
+      return NextResponse.json(
+        { success: false, error: 'Failed to verify payment with Midtrans' },
+        { status: 500 }
+      );
     }
   } catch (error) {
     console.error('Error confirming license:', error);

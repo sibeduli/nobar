@@ -20,7 +20,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
   midtransId: string | null;
   transactionId: string | null;
@@ -83,7 +83,6 @@ export default function PaymentsPage() {
   // Pagination and filter state
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 10, total: 0, totalPages: 0 });
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
 
   // Debounce search input
@@ -94,49 +93,20 @@ export default function PaymentsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const fetchLicenses = useCallback(async (page: number, search: string, paymentStatus: string) => {
+  const fetchLicenses = useCallback(async (page: number, search: string) => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '10',
         search,
-        status: paymentStatus,
       });
       const res = await fetch(`/api/licenses?${params}`);
       const data = await res.json();
       
       if (data.success) {
-        // Check for unpaid licenses with midtransId and try to sync their status
-        const unpaidWithOrderId = data.licenses.filter(
-          (l: License) => l.status === 'unpaid' && l.midtransId
-        );
-        
-        // Sync each unpaid license with Midtrans
-        for (const license of unpaidWithOrderId) {
-          try {
-            await fetch('/api/licenses/check-status', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId: license.midtransId }),
-            });
-          } catch (e) {
-            console.error('Failed to sync license:', e);
-          }
-        }
-        
-        // Re-fetch to get updated statuses if we synced any
-        if (unpaidWithOrderId.length > 0) {
-          const refreshRes = await fetch(`/api/licenses?${params}`);
-          const refreshData = await refreshRes.json();
-          if (refreshData.success) {
-            setLicenses(refreshData.licenses);
-            setPagination(refreshData.pagination);
-          }
-        } else {
-          setLicenses(data.licenses);
-          setPagination(data.pagination);
-        }
+        setLicenses(data.licenses);
+        setPagination(data.pagination);
       }
     } catch (error) {
       console.error('Error fetching licenses:', error);
@@ -146,16 +116,11 @@ export default function PaymentsPage() {
   }, []);
 
   useEffect(() => {
-    fetchLicenses(pagination.page, debouncedSearch, statusFilter);
-  }, [pagination.page, debouncedSearch, statusFilter, fetchLicenses]);
+    fetchLicenses(pagination.page, debouncedSearch);
+  }, [pagination.page, debouncedSearch, fetchLicenses]);
 
   const handlePageChange = (newPage: number) => {
     setPagination(prev => ({ ...prev, page: newPage }));
-  };
-
-  const handleStatusChange = (value: string) => {
-    setStatusFilter(value);
-    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const handleSearchChange = (value: string) => {
@@ -163,8 +128,8 @@ export default function PaymentsPage() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const paidLicenses = licenses.filter(l => l.status === 'paid');
-  const unpaidLicenses = licenses.filter(l => l.status === 'unpaid');
+  // All licenses are active (License only exists after payment succeeds)
+  const activeLicenses = licenses;
 
   return (
     <div className="space-y-6">
@@ -189,16 +154,6 @@ export default function PaymentsPage() {
               className="pl-10 bg-white"
             />
           </div>
-          <Select value={statusFilter} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-white">
-              <SelectValue placeholder="Filter status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              <SelectItem value="paid">Lunas</SelectItem>
-              <SelectItem value="unpaid">Belum Bayar</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </Card>
 
@@ -260,12 +215,12 @@ export default function PaymentsPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* Paid Licenses */}
-          {paidLicenses.length > 0 && (
+          {/* All Licenses (all are paid/active) */}
+          {activeLicenses.length > 0 && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Pembayaran Lunas</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Riwayat Pembayaran</h2>
               <div className="space-y-3">
-                {paidLicenses.map((license) => (
+                {activeLicenses.map((license: License) => (
                   <Card key={license.id} className="border-green-200">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -290,46 +245,6 @@ export default function PaymentsPage() {
                               <FileText className="w-4 h-4 mr-1" />
                               Lihat Invoice
                             </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Unpaid Licenses */}
-          {unpaidLicenses.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-gray-900">Menunggu Pembayaran</h2>
-              <div className="space-y-3">
-                {unpaidLicenses.map((license) => (
-                  <Card key={license.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-yellow-600" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-900">{license.venue.businessName}</p>
-                              <Badge variant="secondary">Belum Bayar</Badge>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {LICENSE_TIERS[license.tier]} • Dibuat {formatDate(license.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900">{formatPrice(license.price)}</p>
-                          <Link
-                            href={`/dashboard/licenses/pay?venueId=${license.venue.id}&tier=${license.tier}`}
-                            className="text-sm text-blue-600 hover:underline"
-                          >
-                            Bayar Sekarang
                           </Link>
                         </div>
                       </div>

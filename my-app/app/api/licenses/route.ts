@@ -26,6 +26,7 @@ const calculateTotalPrice = (tier: number) => {
   return { basePrice, ppn, applicationFee: APPLICATION_FEE, total };
 };
 
+// POST /api/licenses - Get pricing info for a venue (no longer creates License)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -44,6 +45,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if already licensed
+    if (venue.license) {
+      return NextResponse.json(
+        { success: false, error: 'Venue sudah memiliki lisensi aktif' },
+        { status: 400 }
+      );
+    }
+
     // Get tier from venue's capacity (which stores the tier number)
     const tier = venue.capacity;
     
@@ -56,43 +65,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if license already exists
-    if (venue.license) {
-      // Update existing license
-      const license = await prisma.license.update({
-        where: { id: venue.license.id },
-        data: {
-          tier,
-          price: pricing.total, // Server-calculated total
-          status: 'unpaid',
-        },
-      });
-      return NextResponse.json({ success: true, license, pricing });
-    }
-
-    // Create new license
-    const license = await prisma.license.create({
-      data: {
-        venueId,
-        tier,
-        price: pricing.total, // Server-calculated total
-        status: 'unpaid',
-      },
+    // Return pricing info only - License is created on payment success
+    return NextResponse.json({ 
+      success: true, 
+      venueId,
+      tier,
+      pricing,
     });
-
-    // Log activity
-    await logActivity({
-      userEmail: venue.email,
-      action: 'LICENSE_CREATE',
-      description: `Membuat lisensi untuk venue: ${venue.businessName}`,
-      metadata: { venueId, venueName: venue.businessName, licenseId: license.id },
-    });
-
-    return NextResponse.json({ success: true, license, pricing }, { status: 201 });
   } catch (error) {
-    console.error('Error creating license:', error);
+    console.error('Error getting license pricing:', error);
     return NextResponse.json(
-      { success: false, error: 'Gagal membuat lisensi' },
+      { success: false, error: 'Gagal mendapatkan harga lisensi' },
       { status: 500 }
     );
   }
@@ -114,7 +97,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || 'all'; // all, paid, unpaid
+    // Status filter removed - all licenses are active by definition
 
     const skip = (page - 1) * limit;
 
@@ -124,7 +107,6 @@ export async function GET(request: NextRequest) {
         email: string;
         businessName?: { contains: string; mode: 'insensitive' };
       };
-      status?: string;
     };
 
     const whereClause: WhereClause = {
@@ -141,12 +123,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Status filter
-    if (status === 'paid') {
-      whereClause.status = 'paid';
-    } else if (status === 'unpaid') {
-      whereClause.status = 'unpaid';
-    }
+    // No status filter needed - all licenses are active
 
     // Get total count for pagination
     const total = await prisma.license.count({

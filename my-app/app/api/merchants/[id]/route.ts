@@ -86,7 +86,7 @@ export async function PATCH(
       );
     }
 
-    if (existingMerchant.license?.status === 'paid') {
+    if (existingMerchant.license) {
       return NextResponse.json(
         { success: false, error: 'Venue dengan lisensi aktif tidak dapat diedit' },
         { status: 403 }
@@ -152,7 +152,7 @@ export async function DELETE(
       );
     }
 
-    if (existingMerchant.license?.status === 'paid') {
+    if (existingMerchant.license) {
       return NextResponse.json(
         { success: false, error: 'Venue dengan lisensi aktif tidak dapat dihapus' },
         { status: 403 }

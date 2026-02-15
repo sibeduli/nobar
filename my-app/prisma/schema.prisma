@@ -36,8 +36,10 @@ model License {
   venueId           String    @unique
   tier              Int       // 1, 2, 3, 4, or 5
   price             Int       // amount in IDR
-  status            String    @default("unpaid") // "unpaid", "paid"
-  paidAt            DateTime?
+  frozen            Boolean   @default(false) // true = "Dibekukan" by admin (e.g. guest limit violation)
+  frozenAt          DateTime? // when license was frozen
+  frozenReason      String?   // reason for freezing
+  paidAt            DateTime  @default(now()) // License only created on successful payment
   midtransId        String?   // order_id from Midtrans
   transactionId     String?   // transaction_id from Midtrans
   paymentType       String?   // e.g. "credit_card", "bank_transfer", "gopay"

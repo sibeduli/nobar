@@ -13,7 +13,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
   midtransId: string | null;
   transactionId: string | null;
@@ -210,7 +210,7 @@ export default function InvoicePage() {
     );
   }
 
-  const isPaid = license.status === 'paid';
+  const isPaid = true; // License exists = paid/active
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -249,7 +249,7 @@ export default function InvoicePage() {
               <CardTitle className="text-lg">Invoice #{license.midtransId || license.id.slice(-8).toUpperCase()}</CardTitle>
             </div>
             <Badge variant={isPaid ? 'default' : 'secondary'} className={isPaid ? 'bg-green-600' : ''}>
-              {isPaid ? 'Lunas' : 'Belum Bayar'}
+              {isPaid ? 'Lunas' : 'Belum Aktif'}
             </Badge>
           </div>
         </CardHeader>

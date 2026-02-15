@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || 'all'; // all, licensed, unpaid, unlicensed
+    const status = searchParams.get('status') || 'all'; // all, licensed, unlicensed
 
     const skip = (page - 1) * limit;
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     const whereClause: {
       email: string;
       businessName?: { contains: string; mode: 'insensitive' };
-      license?: { status: string } | { isNot: null } | null;
+      license?: { isNot: null } | null;
     } = {
       email: session.user.email,
     };
@@ -92,11 +92,9 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Status filter
+    // Status filter - License exists = licensed, no License = unlicensed
     if (status === 'licensed') {
-      whereClause.license = { status: 'paid' };
-    } else if (status === 'unpaid') {
-      whereClause.license = { status: 'pending' };
+      whereClause.license = { isNot: null };
     } else if (status === 'unlicensed') {
       whereClause.license = null;
     }

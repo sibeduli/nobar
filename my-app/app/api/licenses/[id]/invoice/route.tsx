@@ -252,7 +252,7 @@ interface InvoiceDocumentProps {
     id: string;
     tier: number;
     price: number;
-    status: string;
+    frozen: boolean;
     paidAt: string | null;
     midtransId: string | null;
     transactionId: string | null;
@@ -289,7 +289,7 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 
 const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
   const breakdown = calculateBreakdown(license.tier);
-  const isPaid = license.status === 'paid';
+  const isPaid = true; // License exists = paid/active
 
   return (
     <Document>
@@ -312,7 +312,7 @@ const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
             </Text>
             <View style={[styles.statusBadge, isPaid ? styles.statusPaid : styles.statusUnpaid]}>
               <Text style={{ fontSize: 9, fontWeight: 'bold' }}>
-                {isPaid ? 'LUNAS' : 'BELUM BAYAR'}
+                {isPaid ? 'LUNAS' : 'BELUM AKTIF'}
               </Text>
             </View>
           </View>
@@ -486,7 +486,7 @@ export async function GET(
           id: license.id,
           tier: license.tier,
           price: license.price,
-          status: license.status,
+          frozen: license.frozen,
           paidAt: license.paidAt?.toISOString() || null,
           midtransId: license.midtransId,
           transactionId: license.transactionId,

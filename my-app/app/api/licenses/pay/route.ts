@@ -29,53 +29,43 @@ const calculateTotalPrice = (tier: number) => {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
-    if (!session?.user) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { licenseId } = body;
+    const { venueId } = body;
 
-    // Fetch license with venue to get tier and venue name
-    const license = await prisma.license.findUnique({
-      where: { id: licenseId },
-      include: { venue: true },
+    // Fetch venue to get tier
+    const venue = await prisma.merchant.findUnique({
+      where: { id: venueId },
+      include: { license: true },
     });
 
-    if (!license) {
-      return NextResponse.json({ error: 'License not found' }, { status: 404 });
+    if (!venue) {
+      return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
     }
 
     // Check ownership
-    if (license.venue.email !== session.user.email) {
+    if (venue.email !== session.user.email) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Calculate price server-side based on license tier - ignore any amount from client
-    const pricing = calculateTotalPrice(license.tier);
+    // Check if already licensed
+    if (venue.license) {
+      return NextResponse.json({ error: 'Venue sudah memiliki lisensi aktif' }, { status: 400 });
+    }
+
+    const tier = venue.capacity;
+
+    // Calculate price server-side based on tier - ignore any amount from client
+    const pricing = calculateTotalPrice(tier);
     if (!pricing) {
       return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
     }
 
-    // Verify sum matches total (for debugging)
-    const itemSum = pricing.basePrice + pricing.ppn + pricing.applicationFee;
-    console.log('Payment pricing:', { 
-      basePrice: pricing.basePrice, 
-      ppn: pricing.ppn, 
-      applicationFee: pricing.applicationFee, 
-      total: pricing.total,
-      itemSum,
-      match: itemSum === pricing.total
-    });
-
-    // Generate unique order ID
-    const orderId = `NOBAR-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    // Update license with midtrans order ID
-    await prisma.license.update({
-      where: { id: licenseId },
-      data: { midtransId: orderId },
-    });
+    // Generate unique order ID that encodes venueId and tier for webhook processing
+    const orderId = `NOBAR-${venueId}-${tier}-${Date.now()}`;
 
     const parameter = {
       transaction_details: {
@@ -88,10 +78,10 @@ export async function POST(request: NextRequest) {
       },
       item_details: [
         {
-          id: `license-tier-${license.tier}`,
+          id: `license-tier-${tier}`,
           price: pricing.basePrice,
           quantity: 1,
-          name: `Lisensi Tier ${license.tier}`.substring(0, 50),
+          name: `Lisensi Tier ${tier}`.substring(0, 50),
         },
         {
           id: 'ppn',
@@ -118,6 +108,9 @@ export async function POST(request: NextRequest) {
       token: transaction.token,
       redirect_url: transaction.redirect_url,
       order_id: orderId,
+      venueId,
+      tier,
+      pricing,
     });
   } catch (error) {
     console.error('Payment creation error:', error);

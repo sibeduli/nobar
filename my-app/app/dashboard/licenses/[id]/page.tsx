@@ -12,7 +12,7 @@ interface LicenseDetail {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
   midtransId: string | null;
   venue: {
@@ -161,7 +161,7 @@ export default function LicenseDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const tierData = LICENSE_TIERS[license.tier];
-  const isValid = license.status === 'paid';
+  const isValid = true; // License exists = valid/active
 
   return (
     <div className="space-y-6">

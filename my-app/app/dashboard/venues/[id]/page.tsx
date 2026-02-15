@@ -12,7 +12,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
 }
 
@@ -61,10 +61,10 @@ const getLicenseBadge = (license: License | null) => {
   if (!license) {
     return { label: 'Belum Berlisensi', variant: 'outline' as const };
   }
-  if (license.status === 'paid') {
-    return { label: 'Berlisensi', variant: 'default' as const };
+  if (license.frozen) {
+    return { label: 'Dibekukan', variant: 'destructive' as const };
   }
-  return { label: 'Belum Bayar', variant: 'secondary' as const };
+  return { label: 'Berlisensi', variant: 'default' as const };
 };
 
 export default function VenueDetailPage() {
@@ -149,7 +149,7 @@ export default function VenueDetailPage() {
             <p className="text-gray-500">{venueTypeLabels[venue.venueType] || venue.venueType}</p>
           </div>
         </div>
-        {(!venue.license || venue.license.status !== 'paid') && (
+        {!venue.license && (
           <Link href="/dashboard/licenses">
             <Button>
               <CreditCard className="w-4 h-4 mr-2" />

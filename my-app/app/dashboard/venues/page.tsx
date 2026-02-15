@@ -30,7 +30,7 @@ interface License {
   id: string;
   tier: number;
   price: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
 }
 
@@ -74,10 +74,10 @@ const getLicenseBadge = (license: License | null) => {
   if (!license) {
     return { label: 'Belum Berlisensi', variant: 'outline' as const };
   }
-  if (license.status === 'paid') {
-    return { label: 'Berlisensi', variant: 'default' as const };
+  if (license.frozen) {
+    return { label: 'Dibekukan', variant: 'destructive' as const };
   }
-  return { label: 'Belum Bayar', variant: 'secondary' as const };
+  return { label: 'Berlisensi', variant: 'default' as const };
 };
 
 const formatDate = (dateString: string) => {
@@ -230,7 +230,6 @@ export default function VenuesPage() {
             <SelectContent>
               <SelectItem value="all">Semua Status</SelectItem>
               <SelectItem value="licensed">Berlisensi</SelectItem>
-              <SelectItem value="unpaid">Belum Bayar</SelectItem>
               <SelectItem value="unlicensed">Belum Berlisensi</SelectItem>
             </SelectContent>
           </Select>
@@ -322,7 +321,7 @@ export default function VenuesPage() {
                         Detail
                       </Button>
                     </Link>
-                    {(!venue.license || venue.license.status !== 'paid') && (
+                    {!venue.license && (
                       <>
                         <Link href={`/dashboard/venues/${venue.id}/edit`}>
                           <Button variant="outline" size="sm">

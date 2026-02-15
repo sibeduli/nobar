@@ -12,7 +12,7 @@ import QRCode from 'qrcode';
 interface LicenseDetail {
   id: string;
   tier: number;
-  status: string;
+  frozen: boolean;
   paidAt: string | null;
   midtransId: string | null;
   venue: {
@@ -61,11 +61,9 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       const res = await fetch(`/api/licenses/${id}`);
       const data = await res.json();
       
-      if (data.success && data.license.status === 'paid') {
+      if (data.success && data.license) {
         setLicense(data.license);
         generateQR(data.license.id);
-      } else if (data.license?.status !== 'paid') {
-        setError('Lisensi belum dibayar');
       } else {
         setError(data.error || 'Lisensi tidak ditemukan');
       }

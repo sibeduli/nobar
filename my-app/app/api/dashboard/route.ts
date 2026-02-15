@@ -57,12 +57,13 @@ export async function GET() {
       // Stats
       Promise.all([
         prisma.merchant.count({ where: { email: userEmail } }),
-        prisma.license.count({ where: { venue: { email: userEmail }, status: 'paid' } }),
+        prisma.license.count({ where: { venue: { email: userEmail } } }),
         prisma.license.aggregate({
-          where: { venue: { email: userEmail }, status: 'paid' },
+          where: { venue: { email: userEmail } },
           _sum: { price: true },
         }),
-        prisma.license.count({ where: { venue: { email: userEmail }, status: 'unpaid' } }),
+        // No pending licenses - License only exists after payment
+        Promise.resolve(0),
       ]),
     ]);
 

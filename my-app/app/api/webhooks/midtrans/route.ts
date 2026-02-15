@@ -3,6 +3,37 @@ import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/activity';
 import crypto from 'crypto';
 
+// Server-side pricing for license creation
+const LICENSE_TIERS: Record<number, { price: number }> = {
+  1: { price: 5000000 },
+  2: { price: 10000000 },
+  3: { price: 20000000 },
+  4: { price: 40000000 },
+  5: { price: 100000000 },
+};
+
+const APPLICATION_FEE = 5000;
+const VAT_RATE = 0.12;
+
+const calculateTotalPrice = (tier: number) => {
+  const tierData = LICENSE_TIERS[tier];
+  if (!tierData) return null;
+  const basePrice = tierData.price;
+  const ppn = Math.round(basePrice * VAT_RATE);
+  const total = basePrice + ppn + APPLICATION_FEE;
+  return total;
+};
+
+// Parse order_id format: NOBAR-{venueId}-{tier}-{timestamp}
+const parseOrderId = (orderId: string) => {
+  const parts = orderId.split('-');
+  if (parts.length < 4 || parts[0] !== 'NOBAR') return null;
+  return {
+    venueId: parts[1],
+    tier: parseInt(parts[2], 10),
+  };
+};
+
 // Midtrans webhook notification handler
 export async function POST(request: NextRequest) {
   try {
@@ -38,15 +69,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
     }
 
-    // Find license by midtransId (order_id)
-    const license = await prisma.license.findFirst({
-      where: { midtransId: order_id },
-      include: { venue: true },
+    // Parse order_id to get venueId and tier
+    const orderData = parseOrderId(order_id);
+    if (!orderData) {
+      console.error('Invalid order_id format:', order_id);
+      return NextResponse.json({ error: 'Invalid order_id format' }, { status: 400 });
+    }
+
+    // Fetch venue
+    const venue = await prisma.merchant.findUnique({
+      where: { id: orderData.venueId },
+      include: { license: true },
     });
 
-    if (!license) {
-      console.error('License not found for order_id:', order_id);
-      return NextResponse.json({ error: 'License not found' }, { status: 404 });
+    if (!venue) {
+      console.error('Venue not found for order_id:', order_id);
+      return NextResponse.json({ error: 'Venue not found' }, { status: 404 });
     }
 
     // Determine if payment is successful
@@ -54,75 +92,70 @@ export async function POST(request: NextRequest) {
       (transaction_status === 'capture' && fraud_status === 'accept') ||
       transaction_status === 'settlement';
 
-    const isPending =
-      transaction_status === 'pending';
-
-    const isFailed =
-      transaction_status === 'deny' ||
-      transaction_status === 'cancel' ||
-      transaction_status === 'expire';
-
     // Extract VA number if available
     const vaNumber = va_numbers?.[0]?.va_number || null;
 
-    // Update license based on status
+    // Create license on successful payment
     if (isSuccess) {
-      await prisma.license.update({
-        where: { id: license.id },
-        data: {
-          status: 'paid',
-          paidAt: new Date(),
-          transactionId: transaction_id,
-          paymentType: payment_type,
-          transactionStatus: transaction_status,
-          transactionTime: transaction_time ? new Date(transaction_time) : null,
-          grossAmount: gross_amount,
-          bank: bank || null,
-          vaNumber: vaNumber,
-          cardType: card_type || null,
-          maskedCard: masked_card || null,
-        },
-      });
+      // Check if license already exists (idempotency)
+      if (venue.license) {
+        console.log('License already exists for venue:', venue.id);
+        return NextResponse.json({ success: true, message: 'License already exists' });
+      }
 
-      // Log activity
-      await logActivity({
-        userEmail: license.venue.email,
-        action: 'PAYMENT_SUCCESS',
-        description: `Pembayaran berhasil untuk venue: ${license.venue.businessName}`,
-        metadata: {
-          venueId: license.venueId,
-          venueName: license.venue.businessName,
-          licenseId: license.id,
-          orderId: order_id,
-          paymentType: payment_type,
-        },
-      });
+      const price = calculateTotalPrice(orderData.tier);
+      if (!price) {
+        console.error('Invalid tier:', orderData.tier);
+        return NextResponse.json({ error: 'Invalid tier' }, { status: 400 });
+      }
 
-      console.log('Payment success for license:', license.id);
-    } else if (isPending) {
-      await prisma.license.update({
-        where: { id: license.id },
-        data: {
-          transactionId: transaction_id,
-          paymentType: payment_type,
-          transactionStatus: transaction_status,
-          bank: bank || null,
-          vaNumber: vaNumber,
-        },
-      });
+      // Create license (handle race condition with unique constraint)
+      let license;
+      try {
+        license = await prisma.license.create({
+          data: {
+            venueId: venue.id,
+            tier: orderData.tier,
+            price,
+            paidAt: new Date(),
+            midtransId: order_id,
+            transactionId: transaction_id,
+            paymentType: payment_type,
+            transactionStatus: transaction_status,
+            transactionTime: transaction_time ? new Date(transaction_time) : null,
+            grossAmount: gross_amount,
+            bank: bank || null,
+            vaNumber: vaNumber,
+            cardType: card_type || null,
+            maskedCard: masked_card || null,
+          },
+        });
 
-      console.log('Payment pending for license:', license.id);
-    } else if (isFailed) {
-      await prisma.license.update({
-        where: { id: license.id },
-        data: {
-          transactionStatus: transaction_status,
-          midtransId: null, // Clear so user can retry
-          transactionId: null,
-        },
-      });
+        // Log activity
+        await logActivity({
+          userEmail: venue.email,
+          action: 'PAYMENT_SUCCESS',
+          description: `Pembayaran berhasil untuk venue: ${venue.businessName}`,
+          metadata: {
+            venueId: venue.id,
+            venueName: venue.businessName,
+            licenseId: license.id,
+            orderId: order_id,
+            paymentType: payment_type,
+          },
+        });
 
-      console.log('Payment failed/cancelled for license:', license.id);
+        console.log('License created for venue:', venue.id, 'license:', license.id);
+      } catch (createError: unknown) {
+        // Handle race condition - license already created by client-side check
+        if (createError && typeof createError === 'object' && 'code' in createError && createError.code === 'P2002') {
+          console.log('License already exists for venue (race condition):', venue.id);
+        } else {
+          throw createError;
+        }
+      }
+    } else {
+      console.log('Payment not successful, status:', transaction_status);
     }
 
     // Always return 200 to acknowledge receipt
