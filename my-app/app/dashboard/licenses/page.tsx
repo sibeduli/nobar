@@ -228,33 +228,31 @@ export default function LicensesPage() {
           <div className="grid gap-4">
             {licensedVenues.map((venue) => (
               <Card key={venue.id} className="border-green-200 bg-green-50/50">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
-                          <Badge variant="default" className="bg-green-600">
-                            {LICENSE_TIERS.find(t => t.tier === venue.license?.tier)?.label || `Tier ${venue.license?.tier}`}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {venueTypeLabels[venue.venueType] || venue.venueType} • {venue.kabupaten}
-                        </p>
-                        <p className="text-sm text-green-600 font-medium">
-                          Lisensi aktif untuk Piala Dunia 2026
-                        </p>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900">{venue.businessName}</h3>
+                      <Badge variant="default" className="bg-green-600 mt-1">
+                        {LICENSE_TIERS.find(t => t.tier === venue.license?.tier)?.label || `Tier ${venue.license?.tier}`} ({LICENSE_TIERS.find(t => t.tier === venue.license?.tier)?.description})
+                      </Badge>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {venueTypeLabels[venue.venueType] || venue.venueType} • {venue.kabupaten}
+                      </p>
+                      <p className="text-sm text-green-600 font-medium">
+                        Lisensi aktif untuk Piala Dunia 2026
+                      </p>
+                      <div className="mt-3 pt-3 border-t border-green-200">
+                        <Link href={`/dashboard/licenses/${venue.license?.id}/qr`}>
+                          <Button variant="outline" size="sm">
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Lihat QR
+                          </Button>
+                        </Link>
                       </div>
                     </div>
-                    <Link href={`/dashboard/licenses/${venue.license?.id}/qr`}>
-                      <Button variant="outline" size="sm">
-                        <QrCode className="w-4 h-4 mr-2" />
-                        Lihat QR
-                      </Button>
-                    </Link>
                   </div>
                 </CardContent>
               </Card>

@@ -156,19 +156,19 @@ export default function HelpPage() {
           <p className="text-sm text-orange-700">
             Untuk informasi lebih lanjut atau mengajukan banding, silakan hubungi tim kami melalui WhatsApp atau buat tiket pengaduan baru.
           </p>
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <a
               href="https://wa.me/6281234567890"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+              <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100 w-full sm:w-auto">
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Hubungi via WhatsApp
               </Button>
             </a>
             <Link href="/dashboard/pengaduan/new">
-              <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100">
+              <Button variant="outline" size="sm" className="border-orange-300 text-orange-700 hover:bg-orange-100 w-full sm:w-auto">
                 <FileText className="w-4 h-4 mr-2" />
                 Buat Pengaduan
               </Button>

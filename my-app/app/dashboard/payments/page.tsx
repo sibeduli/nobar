@@ -278,29 +278,30 @@ export default function PaymentsPage() {
                 {activeLicenses.map((license: License) => (
                   <Card key={license.id} className="border-green-200">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-green-600" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-gray-900">{license.venue.businessName}</p>
-                              <Badge variant="default" className="bg-green-600">Lunas</Badge>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              {LICENSE_TIERS[license.tier]} • {license.paidAt && formatDate(license.paidAt)}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
                         </div>
-                        <div className="text-right flex items-center gap-3">
-                          <p className="font-bold text-green-600">{formatPrice(license.price)}</p>
-                          <Link href={`/dashboard/payments/invoice/${license.id}`}>
-                            <Button variant="outline" size="sm">
-                              <FileText className="w-4 h-4 mr-1" />
-                              Lihat Invoice
-                            </Button>
-                          </Link>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-gray-900">{license.venue.businessName}</p>
+                            <Badge variant="default" className="bg-green-600">Lunas</Badge>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {LICENSE_TIERS[license.tier]}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {license.paidAt && formatDate(license.paidAt)}
+                          </p>
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                            <p className="font-bold text-green-600">{formatPrice(license.price)}</p>
+                            <Link href={`/dashboard/payments/invoice/${license.id}`}>
+                              <Button variant="outline" size="sm">
+                                <FileText className="w-4 h-4 mr-1" />
+                                Lihat Invoice
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
