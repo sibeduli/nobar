@@ -80,30 +80,120 @@ restore() {
 }
 
 clean() {
-    echo -e "${RED}WARNING: This will DELETE ALL DATA in the database!${NC}"
-    echo "This includes: merchants, users, and all related data"
-    read -p "Are you sure you want to clean the database? (y/n): " confirm
+    local target="${1:-default}"
     
-    if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-        read -p "Type 'DELETE' to confirm: " confirm2
-        
-        if [ "$confirm2" = "DELETE" ]; then
-            echo -e "${YELLOW}Cleaning database...${NC}"
-            psql $PG_CONN "$DB_NAME" -c 'TRUNCATE TABLE "Merchant" RESTART IDENTITY CASCADE;'
-            
-            if [ $? -eq 0 ]; then
-                echo -e "${GREEN}Database cleaned successfully!${NC}"
-                echo "All merchants and related data have been reset."
+    case "$target" in
+        merchant)
+            echo -e "${RED}WARNING: This will DELETE ALL MERCHANTS and related data (licenses)!${NC}"
+            read -p "Are you sure? (y/n): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                echo -e "${YELLOW}Cleaning merchants...${NC}"
+                psql $PG_CONN "$DB_NAME" -c 'TRUNCATE TABLE "Merchant" RESTART IDENTITY CASCADE;'
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}Merchants cleaned successfully!${NC}"
+                else
+                    echo -e "${RED}Clean failed!${NC}"
+                    exit 1
+                fi
             else
-                echo -e "${RED}Clean failed!${NC}"
-                exit 1
+                echo "Clean cancelled."
             fi
-        else
-            echo "Clean cancelled."
-        fi
-    else
-        echo "Clean cancelled."
-    fi
+            ;;
+        profile)
+            echo -e "${RED}WARNING: This will DELETE ALL USER PROFILES and activity logs!${NC}"
+            read -p "Are you sure? (y/n): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                read -p "Type 'DELETE PROFILES' to confirm: " confirm2
+                if [ "$confirm2" = "DELETE PROFILES" ]; then
+                    echo -e "${YELLOW}Cleaning user profiles...${NC}"
+                    psql $PG_CONN "$DB_NAME" -c 'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE;'
+                    if [ $? -eq 0 ]; then
+                        echo -e "${GREEN}User profiles cleaned successfully!${NC}"
+                    else
+                        echo -e "${RED}Clean failed!${NC}"
+                        exit 1
+                    fi
+                else
+                    echo "Clean cancelled."
+                fi
+            else
+                echo "Clean cancelled."
+            fi
+            ;;
+        pengaduan)
+            echo -e "${RED}WARNING: This will DELETE ALL TICKETS and their messages!${NC}"
+            read -p "Are you sure? (y/n): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                echo -e "${YELLOW}Cleaning tickets...${NC}"
+                psql $PG_CONN "$DB_NAME" -c 'TRUNCATE TABLE "Ticket" RESTART IDENTITY CASCADE;'
+                if [ $? -eq 0 ]; then
+                    echo -e "${GREEN}Tickets cleaned successfully!${NC}"
+                else
+                    echo -e "${RED}Clean failed!${NC}"
+                    exit 1
+                fi
+            else
+                echo "Clean cancelled."
+            fi
+            ;;
+        all)
+            echo -e "${RED}WARNING: This will DELETE ALL DATA including profiles!${NC}"
+            echo "This includes: merchants, licenses, tickets, users, activity logs"
+            read -p "Are you sure? (y/n): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                read -p "Type 'DELETE ALL' to confirm: " confirm2
+                if [ "$confirm2" = "DELETE ALL" ]; then
+                    echo -e "${YELLOW}Cleaning all data...${NC}"
+                    psql $PG_CONN "$DB_NAME" -c '
+                        TRUNCATE TABLE "License" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "Merchant" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "User" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "TicketMessage" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "Ticket" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "ActivityLog" RESTART IDENTITY CASCADE;
+                    '
+                    if [ $? -eq 0 ]; then
+                        echo -e "${GREEN}All data cleaned successfully!${NC}"
+                    else
+                        echo -e "${RED}Clean failed!${NC}"
+                        exit 1
+                    fi
+                else
+                    echo "Clean cancelled."
+                fi
+            else
+                echo "Clean cancelled."
+            fi
+            ;;
+        *)
+            echo -e "${RED}WARNING: This will DELETE ALL DATA except user profiles!${NC}"
+            echo "This includes: merchants, licenses, tickets (with messages), activity logs"
+            read -p "Are you sure? (y/n): " confirm
+            if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
+                read -p "Type 'DELETE' to confirm: " confirm2
+                if [ "$confirm2" = "DELETE" ]; then
+                    echo -e "${YELLOW}Cleaning data (keeping profiles)...${NC}"
+                    psql $PG_CONN "$DB_NAME" -c '
+                        TRUNCATE TABLE "License" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "Merchant" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "TicketMessage" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "Ticket" RESTART IDENTITY CASCADE;
+                        TRUNCATE TABLE "ActivityLog" RESTART IDENTITY CASCADE;
+                    '
+                    if [ $? -eq 0 ]; then
+                        echo -e "${GREEN}Data cleaned successfully! User profiles preserved.${NC}"
+                    else
+                        echo -e "${RED}Clean failed!${NC}"
+                        exit 1
+                    fi
+                else
+                    echo "Clean cancelled."
+                fi
+            else
+                echo "Clean cancelled."
+            fi
+            ;;
+    esac
 }
 
 list() {
@@ -165,20 +255,29 @@ export_csv() {
 usage() {
     echo "Database Management Script"
     echo ""
-    echo "Usage: ./db.sh [command]"
+    echo "Usage: ./db.sh [command] [options]"
     echo ""
     echo "Commands:"
-    echo "  backup    Create a new database backup (.sql)"
-    echo "  restore   Restore database from a backup file"
-    echo "  clean     Delete all data from database (with confirmation)"
-    echo "  list      List all available backups"
-    echo "  export    Export data to CSV files (Excel compatible)"
-    echo "  stats     Show database statistics"
+    echo "  backup              Create a new database backup (.sql)"
+    echo "  restore [file]      Restore database from a backup file"
+    echo "  clean [target]      Delete data from database (with confirmation)"
+    echo "  list                List all available backups"
+    echo "  export              Export data to CSV files (Excel compatible)"
+    echo "  stats               Show database statistics"
+    echo ""
+    echo "Clean targets:"
+    echo "  clean               Delete all except user profiles (default)"
+    echo "  clean merchant      Delete merchants and licenses only"
+    echo "  clean profile       Delete user profiles only"
+    echo "  clean pengaduan     Delete tickets (pengaduan) only"
+    echo "  clean all           Delete everything including profiles"
     echo ""
     echo "Examples:"
     echo "  ./db.sh backup"
     echo "  ./db.sh restore nobar_20260123_120000.sql"
     echo "  ./db.sh clean"
+    echo "  ./db.sh clean merchant"
+    echo "  ./db.sh clean all"
     echo "  ./db.sh list"
 }
 
@@ -191,7 +290,7 @@ case "$1" in
         restore "$2"
         ;;
     clean)
-        clean
+        clean "$2"
         ;;
     list)
         list
