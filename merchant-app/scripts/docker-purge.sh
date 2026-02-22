@@ -16,11 +16,11 @@ docker compose down --remove-orphans 2>/dev/null || true
 
 # Remove the specific image built by this project
 echo "Removing images..."
-docker rmi my-app-app 2>/dev/null || true
+docker rmi merchant-app-app 2>/dev/null || true
 docker rmi nobar-app 2>/dev/null || true
 
 # Remove any dangling images from this build
-docker image prune -f --filter "label=com.docker.compose.project=my-app" 2>/dev/null || true
+docker image prune -f --filter "label=com.docker.compose.project=merchant-app" 2>/dev/null || true
 
 echo "✅ Purge complete!"
 echo "💡 Run ./scripts/docker-build.sh to rebuild"
