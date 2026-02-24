@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }) {
                             />
                             <div>
                                 <div className={`font-semibold text-sm ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Nobar</div>
-                                <div className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Surveyor Portal</div>
+                                <div className={`text-xs ${isDark ? 'text-emerald-500' : 'text-gray-500'}`}>Surveyor Portal</div>
                             </div>
                         </div>
                     )}
@@ -91,7 +91,7 @@ export default function DashboardLayout({ children }) {
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className={`font-medium text-sm truncate ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Abdullah Said</div>
-                                <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Login terakhir: Hari ini</div>
+                                <div className={`text-xs ${isDark ? 'text-emerald-500/80' : 'text-gray-500'}`}>Login terakhir: Hari ini</div>
                             </div>
                         </div>
                     </div>
@@ -129,7 +129,7 @@ export default function DashboardLayout({ children }) {
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                         className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
                             ${isDark 
-                                ? 'text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10' 
+                                ? 'text-emerald-500/70 hover:text-emerald-400 hover:bg-emerald-500/10' 
                                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                             }
                         `}
@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }) {
                 `}>
                     <div>
                         <h1 className={`text-xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Selamat datang, Abdullah!</h1>
-                        <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Kelola venue dan agen Anda di sini.</p>
+                        <p className={`text-sm ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Kelola venue dan agen Anda di sini.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         {/* Theme Switcher */}
@@ -156,7 +156,7 @@ export default function DashboardLayout({ children }) {
                             onClick={toggleTheme}
                             className={`p-2 rounded-lg transition-colors
                                 ${isDark 
-                                    ? 'text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10' 
+                                    ? 'text-emerald-500/70 hover:text-emerald-400 hover:bg-emerald-500/10' 
                                     : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                                 }
                             `}
@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }) {
                         </button>
                         <button className={`relative p-2 rounded-lg transition-colors
                             ${isDark 
-                                ? 'text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10' 
+                                ? 'text-emerald-500/70 hover:text-emerald-400 hover:bg-emerald-500/10' 
                                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
                             }
                         `}>
