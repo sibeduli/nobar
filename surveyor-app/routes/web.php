@@ -26,3 +26,7 @@ Route::get('/agents/activities', function () {
 Route::get('/help', function () {
     return Inertia::render('Help');
 });
+
+Route::get('/surveys', function () {
+    return Inertia::render('Surveys/Index');
+});

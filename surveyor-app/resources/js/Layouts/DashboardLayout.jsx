@@ -8,6 +8,7 @@ import {
     UserPlus,
     List,
     Activity,
+    ClipboardList,
     HelpCircle,
     Search,
     ChevronLeft,
@@ -30,6 +31,7 @@ const navigation = [
             { name: 'Aktivitas Agen', href: '/agents/activities', icon: Activity },
         ]
     },
+    { name: 'Data Survey', href: '/surveys', icon: ClipboardList },
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
