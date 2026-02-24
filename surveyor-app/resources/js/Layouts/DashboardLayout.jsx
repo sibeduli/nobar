@@ -4,8 +4,12 @@ import { useTheme } from '@/Contexts/ThemeContext';
 import {
     LayoutDashboard,
     Building2,
+    Users,
+    UserPlus,
+    List,
     Search,
     ChevronLeft,
+    ChevronDown,
     Bell,
     User,
     Sun,
@@ -15,11 +19,22 @@ import {
 const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Profil Perusahaan', href: '/company-profile', icon: Building2 },
+    { 
+        name: 'Agen Survey', 
+        icon: Users,
+        children: [
+            { name: 'Lihat Agen', href: '/agents', icon: List },
+            { name: 'Daftar Agen', href: '/agents/create', icon: UserPlus },
+        ]
+    },
 ];
 
-function NavItem({ item, collapsed, theme, currentPath }) {
+function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMenu }) {
     const Icon = item.icon;
-    const isActive = currentPath === item.href;
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus.includes(item.name);
+    const isActive = item.href ? currentPath === item.href : false;
+    const isChildActive = hasChildren && item.children.some(child => currentPath === child.href);
 
     const activeClass = theme === 'dark' 
         ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30'
@@ -27,6 +42,50 @@ function NavItem({ item, collapsed, theme, currentPath }) {
     const inactiveClass = theme === 'dark'
         ? 'text-emerald-100/70 hover:bg-emerald-500/10 hover:text-emerald-300'
         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900';
+    const parentActiveClass = theme === 'dark'
+        ? 'text-emerald-400'
+        : 'text-teal-700';
+
+    if (hasChildren) {
+        return (
+            <div>
+                <button
+                    onClick={() => toggleMenu(item.name)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                        ${isChildActive ? parentActiveClass : inactiveClass}
+                    `}
+                >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    {!collapsed && (
+                        <>
+                            <span className="flex-1 text-left">{item.name}</span>
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                        </>
+                    )}
+                </button>
+                {!collapsed && isExpanded && (
+                    <div className="ml-4 mt-1 space-y-1 border-l-2 border-emerald-900/20 pl-3">
+                        {item.children.map((child) => {
+                            const ChildIcon = child.icon;
+                            const isChildItemActive = currentPath === child.href;
+                            return (
+                                <Link
+                                    key={child.name}
+                                    href={child.href}
+                                    className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
+                                        ${isChildItemActive ? activeClass : inactiveClass}
+                                    `}
+                                >
+                                    <ChildIcon className="w-4 h-4 flex-shrink-0" />
+                                    <span>{child.name}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     return (
         <Link
@@ -43,11 +102,20 @@ function NavItem({ item, collapsed, theme, currentPath }) {
 
 export default function DashboardLayout({ children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [expandedMenus, setExpandedMenus] = useState(['Agen Survey']);
     const { theme, toggleTheme } = useTheme();
     const { url } = usePage();
 
     const isDark = theme === 'dark';
     const currentPath = url.split('?')[0];
+
+    const toggleMenu = (menuName) => {
+        setExpandedMenus(prev => 
+            prev.includes(menuName) 
+                ? prev.filter(m => m !== menuName)
+                : [...prev, menuName]
+        );
+    };
 
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#0a0f0f]' : 'bg-gray-50'}`}>
@@ -119,7 +187,15 @@ export default function DashboardLayout({ children }) {
                 {/* Navigation */}
                 <nav className="px-3 py-2 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                     {navigation.map((item) => (
-                        <NavItem key={item.name} item={item} collapsed={sidebarCollapsed} theme={theme} currentPath={currentPath} />
+                        <NavItem 
+                            key={item.name} 
+                            item={item} 
+                            collapsed={sidebarCollapsed} 
+                            theme={theme} 
+                            currentPath={currentPath}
+                            expandedMenus={expandedMenus}
+                            toggleMenu={toggleMenu}
+                        />
                     ))}
                 </nav>
 

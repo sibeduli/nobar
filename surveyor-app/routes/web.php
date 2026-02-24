@@ -10,3 +10,11 @@ Route::get('/', function () {
 Route::get('/company-profile', function () {
     return Inertia::render('CompanyProfile');
 });
+
+Route::get('/agents', function () {
+    return Inertia::render('Agents/Index');
+});
+
+Route::get('/agents/create', function () {
+    return Inertia::render('Agents/Create');
+});
