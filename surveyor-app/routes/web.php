@@ -18,3 +18,7 @@ Route::get('/agents', function () {
 Route::get('/agents/create', function () {
     return Inertia::render('Agents/Create');
 });
+
+Route::get('/agents/activities', function () {
+    return Inertia::render('Agents/Activities');
+});

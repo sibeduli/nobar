@@ -7,6 +7,7 @@ import {
     Users,
     UserPlus,
     List,
+    Activity,
     Search,
     ChevronLeft,
     ChevronDown,
@@ -25,6 +26,7 @@ const navigation = [
         children: [
             { name: 'Lihat Agen', href: '/agents', icon: List },
             { name: 'Daftar Agen', href: '/agents/create', icon: UserPlus },
+            { name: 'Aktivitas Agen', href: '/agents/activities', icon: Activity },
         ]
     },
 ];
