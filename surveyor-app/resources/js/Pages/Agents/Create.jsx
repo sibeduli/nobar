@@ -4,6 +4,7 @@ import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import { ConfirmModal } from '@/Components/Modal';
 import FormInput, { FormTextarea, FormSelect } from '@/Components/FormInput';
+import MultiSelect from '@/Components/MultiSelect';
 import Button from '@/Components/Button';
 import { Link, router } from '@inertiajs/react';
 import { ArrowLeft, Save, UserPlus, Upload, X, CreditCard } from 'lucide-react';
@@ -32,7 +33,7 @@ const initialFormData = {
     phone: '',
     nik: '',
     address: '',
-    area: '',
+    areas: [],
     status: 'pending',
     notes: '',
     ktpPhoto: null,
@@ -124,7 +125,7 @@ export default function AgentsCreate() {
             newErrors.nik = 'NIK harus 16 digit';
         }
         if (!formData.address.trim()) newErrors.address = 'Alamat wajib diisi';
-        if (!formData.area) newErrors.area = 'Area tugas wajib dipilih';
+        if (!formData.areas || formData.areas.length === 0) newErrors.areas = 'Minimal pilih 1 area tugas';
         if (!formData.ktpPhoto) newErrors.ktpPhoto = 'Foto KTP wajib diunggah';
 
         setErrors(newErrors);
@@ -341,14 +342,18 @@ export default function AgentsCreate() {
                             </h2>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormSelect
+                                <MultiSelect
                                     label="Area Tugas"
-                                    name="area"
-                                    value={formData.area}
-                                    onChange={handleChange}
                                     options={areaOptions}
-                                    error={errors.area}
+                                    value={formData.areas}
+                                    onChange={(areas) => {
+                                        setFormData(prev => ({ ...prev, areas }));
+                                        if (errors.areas) setErrors(prev => ({ ...prev, areas: null }));
+                                    }}
+                                    error={errors.areas}
                                     placeholder="Pilih area tugas"
+                                    searchPlaceholder="Cari area..."
+                                    maxItems={3}
                                     required
                                 />
                                 <FormSelect

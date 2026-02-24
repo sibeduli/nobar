@@ -22,3 +22,7 @@ Route::get('/agents/create', function () {
 Route::get('/agents/activities', function () {
     return Inertia::render('Agents/Activities');
 });
+
+Route::get('/help', function () {
+    return Inertia::render('Help');
+});

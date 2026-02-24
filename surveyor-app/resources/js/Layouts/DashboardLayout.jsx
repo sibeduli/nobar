@@ -8,6 +8,7 @@ import {
     UserPlus,
     List,
     Activity,
+    HelpCircle,
     Search,
     ChevronLeft,
     ChevronDown,
@@ -29,6 +30,7 @@ const navigation = [
             { name: 'Aktivitas Agen', href: '/agents/activities', icon: Activity },
         ]
     },
+    { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
 function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMenu }) {

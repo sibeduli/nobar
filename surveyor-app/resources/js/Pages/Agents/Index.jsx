@@ -26,18 +26,18 @@ import {
 
 // Mock data - will be replaced with server-side data
 const mockAgents = [
-    { id: 1, name: 'Ahmad Sudrajat', email: 'ahmad.sudrajat@email.com', phone: '08123456789', area: 'Jakarta Selatan', status: 'active', surveys: 45, joinDate: '2024-01-15' },
-    { id: 2, name: 'Budi Santoso', email: 'budi.santoso@email.com', phone: '08234567890', area: 'Jakarta Barat', status: 'active', surveys: 32, joinDate: '2024-02-20' },
-    { id: 3, name: 'Citra Dewi', email: 'citra.dewi@email.com', phone: '08345678901', area: 'Jakarta Timur', status: 'inactive', surveys: 28, joinDate: '2024-01-08' },
-    { id: 4, name: 'Dedi Kurniawan', email: 'dedi.k@email.com', phone: '08456789012', area: 'Jakarta Pusat', status: 'active', surveys: 51, joinDate: '2023-11-10' },
-    { id: 5, name: 'Eka Putri', email: 'eka.putri@email.com', phone: '08567890123', area: 'Jakarta Utara', status: 'pending', surveys: 0, joinDate: '2024-03-01' },
-    { id: 6, name: 'Fajar Ramadhan', email: 'fajar.r@email.com', phone: '08678901234', area: 'Tangerang', status: 'active', surveys: 67, joinDate: '2023-09-15' },
-    { id: 7, name: 'Gita Nuraini', email: 'gita.n@email.com', phone: '08789012345', area: 'Bekasi', status: 'active', surveys: 23, joinDate: '2024-02-01' },
-    { id: 8, name: 'Hendra Wijaya', email: 'hendra.w@email.com', phone: '08890123456', area: 'Depok', status: 'inactive', surveys: 15, joinDate: '2023-12-20' },
-    { id: 9, name: 'Indah Permata', email: 'indah.p@email.com', phone: '08901234567', area: 'Bogor', status: 'active', surveys: 38, joinDate: '2024-01-25' },
-    { id: 10, name: 'Joko Susilo', email: 'joko.s@email.com', phone: '08012345678', area: 'Jakarta Selatan', status: 'active', surveys: 42, joinDate: '2023-10-05' },
-    { id: 11, name: 'Kartika Sari', email: 'kartika.s@email.com', phone: '08123456780', area: 'Jakarta Barat', status: 'pending', surveys: 0, joinDate: '2024-03-05' },
-    { id: 12, name: 'Lukman Hakim', email: 'lukman.h@email.com', phone: '08234567891', area: 'Jakarta Timur', status: 'active', surveys: 29, joinDate: '2024-01-18' },
+    { id: 1, name: 'Ahmad Sudrajat', email: 'ahmad.sudrajat@email.com', phone: '08123456789', areas: ['Jakarta Selatan', 'Jakarta Pusat'], status: 'active', surveys: 45, joinDate: '2024-01-15' },
+    { id: 2, name: 'Budi Santoso', email: 'budi.santoso@email.com', phone: '08234567890', areas: ['Jakarta Barat'], status: 'active', surveys: 32, joinDate: '2024-02-20' },
+    { id: 3, name: 'Citra Dewi', email: 'citra.dewi@email.com', phone: '08345678901', areas: ['Jakarta Timur', 'Bekasi'], status: 'inactive', surveys: 28, joinDate: '2024-01-08' },
+    { id: 4, name: 'Dedi Kurniawan', email: 'dedi.k@email.com', phone: '08456789012', areas: ['Jakarta Pusat'], status: 'active', surveys: 51, joinDate: '2023-11-10' },
+    { id: 5, name: 'Eka Putri', email: 'eka.putri@email.com', phone: '08567890123', areas: ['Jakarta Utara'], status: 'pending', surveys: 0, joinDate: '2024-03-01' },
+    { id: 6, name: 'Fajar Ramadhan', email: 'fajar.r@email.com', phone: '08678901234', areas: ['Tangerang', 'Jakarta Barat', 'Depok'], status: 'active', surveys: 67, joinDate: '2023-09-15' },
+    { id: 7, name: 'Gita Nuraini', email: 'gita.n@email.com', phone: '08789012345', areas: ['Bekasi'], status: 'active', surveys: 23, joinDate: '2024-02-01' },
+    { id: 8, name: 'Hendra Wijaya', email: 'hendra.w@email.com', phone: '08890123456', areas: ['Depok', 'Bogor'], status: 'inactive', surveys: 15, joinDate: '2023-12-20' },
+    { id: 9, name: 'Indah Permata', email: 'indah.p@email.com', phone: '08901234567', areas: ['Bogor'], status: 'active', surveys: 38, joinDate: '2024-01-25' },
+    { id: 10, name: 'Joko Susilo', email: 'joko.s@email.com', phone: '08012345678', areas: ['Jakarta Selatan'], status: 'active', surveys: 42, joinDate: '2023-10-05' },
+    { id: 11, name: 'Kartika Sari', email: 'kartika.s@email.com', phone: '08123456780', areas: ['Jakarta Barat', 'Tangerang'], status: 'pending', surveys: 0, joinDate: '2024-03-05' },
+    { id: 12, name: 'Lukman Hakim', email: 'lukman.h@email.com', phone: '08234567891', areas: ['Jakarta Timur'], status: 'active', surveys: 29, joinDate: '2024-01-18' },
 ];
 
 const statusConfig = {
@@ -150,7 +150,27 @@ export default function AgentsIndex() {
             )
         },
         { key: 'phone', label: 'Telepon' },
-        { key: 'area', label: 'Area' },
+        { 
+            key: 'areas', 
+            label: 'Area',
+            render: (value) => (
+                <div className="flex flex-wrap gap-1">
+                    {value.map((area, idx) => (
+                        <span
+                            key={idx}
+                            className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md
+                                ${isDark 
+                                    ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20' 
+                                    : 'bg-teal-50 text-teal-700'
+                                }
+                            `}
+                        >
+                            {area}
+                        </span>
+                    ))}
+                </div>
+            )
+        },
         { 
             key: 'status', 
             label: 'Status',
@@ -383,9 +403,23 @@ export default function AgentsIndex() {
                                 <Phone className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
                                 <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.phone}</span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <MapPin className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.area}</span>
+                            <div className="flex items-start gap-3">
+                                <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                <div className="flex flex-wrap gap-1">
+                                    {selectedAgent.areas?.map((area, idx) => (
+                                        <span
+                                            key={idx}
+                                            className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md
+                                                ${isDark 
+                                                    ? 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20' 
+                                                    : 'bg-teal-50 text-teal-700'
+                                                }
+                                            `}
+                                        >
+                                            {area}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
