@@ -42,3 +42,19 @@ Route::get('/pic/activities', function () {
 Route::get('/settings', function () {
     return Inertia::render('Settings/Index');
 });
+
+Route::get('/login', function () {
+    return Inertia::render('Auth/Login');
+});
+
+Route::get('/register', function () {
+    return Inertia::render('Auth/Register');
+});
+
+Route::get('/forgot-password', function () {
+    return Inertia::render('Auth/ForgotPassword');
+});
+
+Route::get('/pending-approval', function () {
+    return Inertia::render('Auth/PendingApproval');
+});
