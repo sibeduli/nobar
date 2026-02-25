@@ -126,9 +126,9 @@ export default function CompanyProfile() {
 
     return (
         <DashboardLayout>
-            <div className="max-w-4xl mx-auto">
+            <div className={`max-w-4xl mx-auto ${isEditing ? 'pb-24 sm:pb-0' : ''}`}>
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                         <h1 className={`text-2xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
                             Profil Perusahaan
@@ -138,12 +138,12 @@ export default function CompanyProfile() {
                         </p>
                     </div>
                     {!isEditing ? (
-                        <Button onClick={() => setIsEditing(true)}>
+                        <Button onClick={() => setIsEditing(true)} className="w-full sm:w-auto justify-center">
                             <Edit3 className="w-4 h-4" />
                             Edit Profil
                         </Button>
                     ) : (
-                        <div className="flex gap-2">
+                        <div className="hidden sm:flex gap-2">
                             <Button variant="ghost" onClick={handleCancel}>
                                 <X className="w-4 h-4" />
                                 Batal
@@ -372,6 +372,24 @@ export default function CompanyProfile() {
                     )}
                 </div>
             </div>
+
+            {/* Mobile Sticky Action Bar */}
+            {isEditing && (
+                <div className={`fixed bottom-0 left-0 right-0 p-4 sm:hidden z-40 border-t
+                    ${isDark ? 'bg-[#0d1414] border-emerald-900/30' : 'bg-white border-gray-200'}
+                `}>
+                    <div className="flex gap-3">
+                        <Button variant="ghost" onClick={handleCancel} className="flex-1 justify-center">
+                            <X className="w-4 h-4" />
+                            Batal
+                        </Button>
+                        <Button onClick={handleSave} loading={isSaving} className="flex-1 justify-center">
+                            <Save className="w-4 h-4" />
+                            Simpan
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {/* Cancel Confirmation Modal */}
             <ConfirmModal

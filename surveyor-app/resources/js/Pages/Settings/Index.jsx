@@ -191,6 +191,7 @@ export default function SettingsIndex() {
                 </div>
 
                 {/* Tabs */}
+                <div className="overflow-x-auto -mx-6 px-6">
                 <div className={`flex gap-1 p-1 rounded-xl w-fit ${isDark ? 'bg-emerald-950/50' : 'bg-gray-100'}`}>
                     {tabs.map(tab => {
                         const Icon = tab.icon;
@@ -210,6 +211,7 @@ export default function SettingsIndex() {
                             </button>
                         );
                     })}
+                </div>
                 </div>
 
                 {/* Profile Tab */}
@@ -434,7 +436,7 @@ export default function SettingsIndex() {
                 {/* Sessions Tab */}
                 {activeTab === 'sessions' && (
                     <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <div className="flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}">
+                        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div>
                                 <h2 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
                                     Sesi Aktif
@@ -444,26 +446,26 @@ export default function SettingsIndex() {
                                 </p>
                             </div>
                             {sessions.filter(s => !s.current).length > 0 && (
-                                <Button variant="danger" size="sm" onClick={revokeAllSessions}>
+                                <Button variant="danger" size="sm" onClick={revokeAllSessions} className="w-full sm:w-auto justify-center">
                                     <LogOut className="w-4 h-4" />
                                     Logout Semua Perangkat Lain
                                 </Button>
                             )}
                         </div>
 
-                        <div className="divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}">
+                        <div className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
                             {sessions.map(session => (
-                                <div key={session.id} className="p-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}`}>
+                                <div key={session.id} className="p-4 flex items-start sm:items-center justify-between gap-3">
+                                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                                        <div className={`p-2 rounded-lg flex-shrink-0 ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}`}>
                                             {session.device.includes('iPhone') || session.device.includes('Android') ? (
                                                 <Smartphone className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
                                             ) : (
                                                 <Monitor className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
                                             )}
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <p className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
                                                     {session.device}
                                                 </p>
@@ -473,7 +475,7 @@ export default function SettingsIndex() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-3 mt-1">
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                                                 <span className={`text-xs flex items-center gap-1 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
                                                     <MapPin className="w-3 h-3" />
                                                     {session.location}
@@ -491,7 +493,7 @@ export default function SettingsIndex() {
                                     {!session.current && (
                                         <button
                                             onClick={() => revokeSession(session.id)}
-                                            className={`p-2 rounded-lg transition-colors ${isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-600'}`}
+                                            className={`p-2 rounded-lg transition-colors flex-shrink-0 ${isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-600'}`}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>

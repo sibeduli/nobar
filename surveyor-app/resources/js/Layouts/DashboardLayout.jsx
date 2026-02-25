@@ -27,6 +27,8 @@ import {
     Moon,
     LogOut,
     ExternalLink,
+    Menu,
+    X,
 } from 'lucide-react';
 
 const navigation = [
@@ -63,7 +65,7 @@ const navigation = [
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
-function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMenu }) {
+function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMenu, onNavigate }) {
     const Icon = item.icon;
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus.includes(item.name);
@@ -106,6 +108,7 @@ function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMen
                                 <Link
                                     key={child.name}
                                     href={child.href}
+                                    onClick={onNavigate}
                                     className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
                                         ${isChildItemActive ? activeClass : inactiveClass}
                                     `}
@@ -124,6 +127,7 @@ function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMen
     return (
         <Link
             href={item.href}
+            onClick={onNavigate}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
                 ${isActive ? activeClass : inactiveClass}
             `}
@@ -136,6 +140,7 @@ function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMen
 
 export default function DashboardLayout({ children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState(['Agen Survey']);
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
@@ -163,17 +168,46 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-[#0a0f0f]' : 'bg-gray-50'}`}>
+            {/* Mobile Menu Backdrop */}
+            {mobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside 
-                className={`fixed top-0 left-0 h-full transition-all duration-300 z-40
-                    ${sidebarCollapsed ? 'w-16' : 'w-64'}
+                className={`fixed top-0 left-0 h-full transition-all duration-300 z-50
+                    ${sidebarCollapsed ? 'lg:w-16' : 'lg:w-64'}
+                    ${mobileMenuOpen ? 'w-72 translate-x-0' : 'w-72 -translate-x-full lg:translate-x-0'}
                     ${isDark ? 'bg-[#0d1414] border-r border-emerald-900/30' : 'bg-white border-r border-gray-200'}
                 `}
             >
                 {/* Logo */}
                 <div className={`h-16 flex items-center justify-between px-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                    {/* Mobile: Always show full logo */}
+                    <div className="flex items-center gap-3 lg:hidden">
+                        <img 
+                            src={isDark ? '/TVRI-logo-dark.svg' : '/TVRI-logo.svg'}
+                            alt="TVRI" 
+                            className="w-10 h-10 object-contain"
+                        />
+                        <div>
+                            <div className={`font-semibold text-sm ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Nobar</div>
+                            <div className={`text-xs ${isDark ? 'text-emerald-500' : 'text-gray-500'}`}>Surveyor Portal</div>
+                        </div>
+                    </div>
+                    {/* Mobile close button */}
+                    <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`lg:hidden p-2 rounded-lg ${isDark ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-gray-600 hover:bg-gray-100'}`}
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                    {/* Desktop: Collapsible logo */}
                     {!sidebarCollapsed && (
-                        <div className="flex items-center gap-3">
+                        <div className="hidden lg:flex items-center gap-3">
                             <img 
                                 src={isDark ? '/TVRI-logo-dark.svg' : '/TVRI-logo.svg'}
                                 alt="TVRI" 
@@ -189,14 +223,14 @@ export default function DashboardLayout({ children }) {
                         <img 
                             src={isDark ? '/TVRI-logo-dark.svg' : '/TVRI-logo.svg'}
                             alt="TVRI" 
-                            className="w-10 h-10 object-contain mx-auto"
+                            className="hidden lg:block w-10 h-10 object-contain mx-auto"
                         />
                     )}
                 </div>
 
                 {/* User Info */}
-                {!sidebarCollapsed && (
-                    <div className={`px-4 py-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                {(!sidebarCollapsed || mobileMenuOpen) && (
+                    <div className={`px-4 py-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                         <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDark ? 'bg-emerald-500/20 ring-1 ring-emerald-500/30' : 'bg-teal-100'}`}>
                                 <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
@@ -210,8 +244,8 @@ export default function DashboardLayout({ children }) {
                 )}
 
                 {/* Search */}
-                {!sidebarCollapsed && (
-                    <div className="px-4 py-3">
+                {(!sidebarCollapsed || mobileMenuOpen) && (
+                    <div className={`px-4 py-3 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                         <div className="relative">
                             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`} />
                             <input
@@ -234,17 +268,18 @@ export default function DashboardLayout({ children }) {
                         <NavItem 
                             key={item.name} 
                             item={item} 
-                            collapsed={sidebarCollapsed} 
+                            collapsed={sidebarCollapsed && !mobileMenuOpen} 
                             theme={theme} 
                             currentPath={currentPath}
                             expandedMenus={expandedMenus}
                             toggleMenu={toggleMenu}
+                            onNavigate={() => setMobileMenuOpen(false)}
                         />
                     ))}
                 </nav>
 
-                {/* Collapse Button */}
-                <div className="absolute bottom-4 left-0 right-0 px-3">
+                {/* Collapse Button - Desktop only */}
+                <div className="absolute bottom-4 left-0 right-0 px-3 hidden lg:block">
                     <button
                         onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                         className={`w-full flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors
@@ -261,12 +296,28 @@ export default function DashboardLayout({ children }) {
             </aside>
 
             {/* Main Content */}
-            <div className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'}`}>
-                {/* Top Header */}
-                <header className={`h-16 flex items-center justify-between px-6 sticky top-0 z-30 transition-colors
+            <div className={`transition-all duration-300 ml-0 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+                {/* Top Header - Fixed on mobile, sticky on desktop */}
+                <header className={`h-16 flex items-center justify-between px-4 lg:px-6 fixed lg:sticky top-0 left-0 right-0 z-30 transition-colors
+                    ${sidebarCollapsed ? 'lg:left-16' : 'lg:left-64'}
                     ${isDark ? 'bg-[#0d1414] border-b border-emerald-900/30' : 'bg-white border-b border-gray-200'}
                 `}>
-                    <div>
+                    {/* Mobile: Hamburger + Logo */}
+                    <div className="flex items-center gap-3 lg:hidden">
+                        <button
+                            onClick={() => setMobileMenuOpen(true)}
+                            className={`p-2 rounded-lg ${isDark ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-gray-600 hover:bg-gray-100'}`}
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+                        <img 
+                            src={isDark ? '/TVRI-logo-dark.svg' : '/TVRI-logo.svg'}
+                            alt="TVRI" 
+                            className="w-8 h-8 object-contain"
+                        />
+                    </div>
+                    {/* Desktop: Welcome text */}
+                    <div className="hidden lg:block">
                         <h1 className={`text-xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Selamat datang, Abdullah!</h1>
                         <p className={`text-sm ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Kelola venue dan agen Anda di sini.</p>
                     </div>
@@ -444,7 +495,7 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Page Content */}
-                <main className="p-6">
+                <main className="p-4 lg:p-6 pt-20 lg:pt-6">
                     {children}
                 </main>
             </div>

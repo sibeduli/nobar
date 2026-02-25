@@ -306,6 +306,7 @@ export default function AgentsIndex() {
                 </div>
 
                 {/* Tabs */}
+                <div className="overflow-x-auto -mx-6 px-6">
                 <div className={`inline-flex rounded-lg p-1 ${isDark ? 'bg-emerald-950/30' : 'bg-gray-100'}`}>
                     {tabs.map(tab => (
                         <button
@@ -333,6 +334,7 @@ export default function AgentsIndex() {
                             </span>
                         </button>
                     ))}
+                </div>
                 </div>
 
                 {/* Data Table */}

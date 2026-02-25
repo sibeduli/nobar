@@ -154,7 +154,7 @@ export default function Welcome() {
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
-                        <div className="divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}">
+                        <div className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
                             {recentSurveys.map(survey => (
                                 <div key={survey.id} className="p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -191,7 +191,7 @@ export default function Welcome() {
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
-                        <div className="divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}">
+                        <div className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
                             {recentViolations.map(violation => (
                                 <div key={violation.id} className="p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -229,7 +229,7 @@ export default function Welcome() {
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
-                        <div className="divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}">
+                        <div className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
                             {recentAgentActivities.map(activity => (
                                 <div key={activity.id} className="p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -266,7 +266,7 @@ export default function Welcome() {
                                 <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
-                        <div className="divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}">
+                        <div className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
                             {recentPICActivities.map(activity => (
                                 <div key={activity.id} className="p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-3">

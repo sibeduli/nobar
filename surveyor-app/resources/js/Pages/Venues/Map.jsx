@@ -190,7 +190,7 @@ export default function VenuesMap() {
         <DashboardLayout>
             <div className="h-[calc(100vh-6rem)] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
                         <h1 className={`text-2xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
                             Peta Venue
@@ -307,14 +307,14 @@ export default function VenuesMap() {
                 )}
 
                 {/* Stats Bar */}
-                <div className={`flex items-center justify-between mb-4 p-3 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                    <div className="flex items-center gap-4">
+                <div className={`mb-4 p-3 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                    <div className="flex flex-wrap items-center gap-3">
                         <div className="flex items-center gap-2">
                             <MapPin className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
                             <span className={`text-sm font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.total} Venue</span>
                         </div>
-                        <div className="h-4 w-px bg-gray-300" />
-                        <div className="flex items-center gap-4 text-xs">
+                        <div className="hidden sm:block h-4 w-px bg-gray-300" />
+                        <div className="flex flex-wrap items-center gap-3 text-xs">
                             <span className="flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
                                 <span className={isDark ? 'text-emerald-100' : 'text-gray-600'}>{stats.approved} Disetujui</span>
@@ -333,7 +333,7 @@ export default function VenuesMap() {
                     {/* Hide POI Toggle */}
                     <button
                         onClick={() => setHidePOI(!hidePOI)}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors
+                        className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg transition-colors mt-3
                             ${hidePOI
                                 ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-teal-100 text-teal-700'
                                 : isDark ? 'bg-emerald-950/50 text-emerald-500/60' : 'bg-gray-100 text-gray-500'
