@@ -141,7 +141,7 @@ export default function Welcome() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Recent Surveys */}
                     <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <div className="flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}">
+                        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div>
                                 <h2 className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Survey Terbaru</h2>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>3 survey terakhir</p>
@@ -178,7 +178,7 @@ export default function Welcome() {
 
                     {/* Recent Violations */}
                     <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <div className="flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}">
+                        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div>
                                 <h2 className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Pelanggaran Terbaru</h2>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>3 pelanggaran terakhir</p>
@@ -216,7 +216,7 @@ export default function Welcome() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Agent Activities */}
                     <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <div className="flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}">
+                        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div>
                                 <h2 className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Aktivitas Agen</h2>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>3 aktivitas agen terakhir</p>
@@ -253,7 +253,7 @@ export default function Welcome() {
 
                     {/* PIC Activities */}
                     <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <div className="flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}">
+                        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div>
                                 <h2 className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Aktivitas PIC</h2>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>3 aktivitas Anda terakhir</p>
