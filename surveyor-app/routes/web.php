@@ -58,3 +58,36 @@ Route::get('/forgot-password', function () {
 Route::get('/pending-approval', function () {
     return Inertia::render('Auth/PendingApproval');
 });
+
+// Agent Routes
+Route::get('/agent/login', function () {
+    return Inertia::render('Agent/Login');
+});
+
+Route::get('/agent', function () {
+    return Inertia::render('Agent/Dashboard');
+});
+
+Route::get('/agent/surveys', function () {
+    return Inertia::render('Agent/Surveys/Index');
+});
+
+Route::get('/agent/surveys/new', function () {
+    return Inertia::render('Agent/Surveys/Create');
+});
+
+Route::get('/agent/report', function () {
+    return Inertia::render('Agent/Report/Index');
+});
+
+Route::get('/agent/surveys/{id}', function ($id) {
+    return Inertia::render('Agent/Surveys/Show', ['id' => $id]);
+});
+
+Route::get('/agent/violations/report', function () {
+    return Inertia::render('Agent/Violations/Report');
+});
+
+Route::get('/agent/profile', function () {
+    return Inertia::render('Agent/Profile');
+});

@@ -21,7 +21,11 @@ import {
     MapPin,
     CheckCircle,
     XCircle,
-    Download
+    Download,
+    Key,
+    LogOut,
+    Lock,
+    EyeOff
 } from 'lucide-react';
 
 // Mock data - will be replaced with server-side data
@@ -58,6 +62,10 @@ export default function AgentsIndex() {
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
     const [selectedAgents, setSelectedAgents] = useState([]);
     const [activeTab, setActiveTab] = useState('all');
+    const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+    const [showForceLogoutModal, setShowForceLogoutModal] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
 
     // Summary stats
     const stats = {
@@ -107,6 +115,35 @@ export default function AgentsIndex() {
 
     const handleExport = (selected) => {
         toast.info(`Mengekspor ${selected.length} data agen...`);
+    };
+
+    const handleResetPassword = (agent) => {
+        setSelectedAgent(agent);
+        setNewPassword('');
+        setShowNewPassword(false);
+        setShowResetPasswordModal(true);
+    };
+
+    const confirmResetPassword = () => {
+        if (newPassword.length < 6) {
+            toast.error('Password minimal 6 karakter');
+            return;
+        }
+        toast.success(`Password ${selectedAgent.name} berhasil direset`);
+        setShowResetPasswordModal(false);
+        setSelectedAgent(null);
+        setNewPassword('');
+    };
+
+    const handleForceLogout = (agent) => {
+        setSelectedAgent(agent);
+        setShowForceLogoutModal(true);
+    };
+
+    const confirmForceLogout = () => {
+        toast.success(`Semua sesi ${selectedAgent.name} berhasil dilogout`);
+        setShowForceLogoutModal(false);
+        setSelectedAgent(null);
     };
 
     const bulkActions = [
@@ -202,6 +239,24 @@ export default function AgentsIndex() {
                         title="Lihat Detail"
                     >
                         <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => handleResetPassword(row)}
+                        className={`p-1.5 rounded-lg transition-colors
+                            ${isDark ? 'text-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10' : 'text-amber-500 hover:text-amber-600 hover:bg-amber-50'}
+                        `}
+                        title="Reset Password"
+                    >
+                        <Key className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => handleForceLogout(row)}
+                        className={`p-1.5 rounded-lg transition-colors
+                            ${isDark ? 'text-blue-500/60 hover:text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'}
+                        `}
+                        title="Force Logout"
+                    >
+                        <LogOut className="w-4 h-4" />
                     </button>
                     <Link
                         href={`/agents/${row.id}/edit`}
@@ -452,6 +507,80 @@ export default function AgentsIndex() {
                     </div>
                 )}
             </Modal>
+
+            {/* Reset Password Modal */}
+            <Modal
+                isOpen={showResetPasswordModal}
+                onClose={() => setShowResetPasswordModal(false)}
+                title="Reset Password Agen"
+            >
+                {selectedAgent && (
+                    <div className="space-y-4">
+                        <div className={`p-4 rounded-lg ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
+                            <div className="flex items-center gap-3">
+                                <Key className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                                <div>
+                                    <p className={`text-sm font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                                        Reset password untuk {selectedAgent.name}
+                                    </p>
+                                    <p className={`text-xs ${isDark ? 'text-amber-400/70' : 'text-amber-600'}`}>
+                                        Login: {selectedAgent.phone}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
+                                Password Baru <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type={showNewPassword ? 'text' : 'password'}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="Minimal 6 karakter"
+                                    className={`w-full px-4 py-2.5 pr-10 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2
+                                        ${isDark 
+                                            ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 placeholder:text-emerald-500/40 focus:ring-emerald-500/50' 
+                                            : 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-teal-500'
+                                        }
+                                    `}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNewPassword(!showNewPassword)}
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" onClick={() => setShowResetPasswordModal(false)}>
+                                Batal
+                            </Button>
+                            <Button onClick={confirmResetPassword}>
+                                <Key className="w-4 h-4" />
+                                Reset Password
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Force Logout Modal */}
+            <ConfirmModal
+                isOpen={showForceLogoutModal}
+                onClose={() => setShowForceLogoutModal(false)}
+                onConfirm={confirmForceLogout}
+                title="Force Logout Agen?"
+                message={selectedAgent ? `Semua sesi aktif ${selectedAgent.name} akan dilogout. Agen harus login ulang untuk mengakses aplikasi.` : ''}
+                confirmText="Ya, Logout Semua"
+                cancelText="Batal"
+                variant="warning"
+            />
         </DashboardLayout>
     );
 }

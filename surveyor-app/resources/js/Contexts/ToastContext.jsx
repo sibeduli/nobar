@@ -47,7 +47,7 @@ export function useToast() {
 
 function ToastContainer({ toasts, removeToast }) {
     return (
-        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        <div className="fixed top-16 left-4 right-4 z-50 flex flex-col gap-2 sm:left-auto sm:right-4 sm:max-w-sm">
             {toasts.map(toast => (
                 <Toast key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
             ))}
@@ -68,24 +68,24 @@ function Toast({ toast, onClose }) {
 
     const colors = {
         success: {
-            dark: 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400',
-            light: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            icon: isDark ? 'text-emerald-400' : 'text-emerald-500',
+            dark: 'bg-emerald-900 border-emerald-700 text-emerald-100',
+            light: 'bg-emerald-600 border-emerald-700 text-white',
+            icon: 'text-white',
         },
         error: {
-            dark: 'bg-red-500/20 border-red-500/30 text-red-400',
-            light: 'bg-red-50 border-red-200 text-red-700',
-            icon: isDark ? 'text-red-400' : 'text-red-500',
+            dark: 'bg-red-900 border-red-700 text-red-100',
+            light: 'bg-red-600 border-red-700 text-white',
+            icon: 'text-white',
         },
         warning: {
-            dark: 'bg-amber-500/20 border-amber-500/30 text-amber-400',
-            light: 'bg-amber-50 border-amber-200 text-amber-700',
-            icon: isDark ? 'text-amber-400' : 'text-amber-500',
+            dark: 'bg-amber-900 border-amber-700 text-amber-100',
+            light: 'bg-amber-600 border-amber-700 text-white',
+            icon: 'text-white',
         },
         info: {
-            dark: 'bg-blue-500/20 border-blue-500/30 text-blue-400',
-            light: 'bg-blue-50 border-blue-200 text-blue-700',
-            icon: isDark ? 'text-blue-400' : 'text-blue-500',
+            dark: 'bg-blue-900 border-blue-700 text-blue-100',
+            light: 'bg-blue-600 border-blue-700 text-white',
+            icon: 'text-white',
         },
     };
 
