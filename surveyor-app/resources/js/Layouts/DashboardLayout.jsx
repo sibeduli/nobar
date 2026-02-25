@@ -25,6 +25,8 @@ import {
     User,
     Sun,
     Moon,
+    LogOut,
+    ExternalLink,
 } from 'lucide-react';
 
 const navigation = [
@@ -135,8 +137,18 @@ function NavItem({ item, collapsed, theme, currentPath, expandedMenus, toggleMen
 export default function DashboardLayout({ children }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState(['Agen Survey']);
+    const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
     const { url } = usePage();
+
+    // Mock user data
+    const user = {
+        name: 'Abdullah Said',
+        email: 'abdullah@example.com',
+        role: 'PIC',
+        company: 'PT Mitra Nobar',
+        avatar: null,
+    };
 
     const isDark = theme === 'dark';
     const currentPath = url.split('?')[0];
@@ -281,10 +293,152 @@ export default function DashboardLayout({ children }) {
                             <Bell className="w-5 h-5" />
                             <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${isDark ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
                         </button>
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center
-                            ${isDark ? 'bg-emerald-500/20 ring-1 ring-emerald-500/30' : 'bg-teal-100'}
-                        `}>
-                            <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                        {/* User Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                                className={`flex items-center gap-2 p-1 pr-3 rounded-xl transition-colors
+                                    ${isDark 
+                                        ? 'hover:bg-emerald-500/10' 
+                                        : 'hover:bg-gray-50'
+                                    }
+                                    ${userDropdownOpen 
+                                        ? isDark ? 'bg-emerald-500/10' : 'bg-gray-50' 
+                                        : ''
+                                    }
+                                `}
+                            >
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center
+                                    ${isDark ? 'bg-emerald-500/20 ring-1 ring-emerald-500/30' : 'bg-teal-100'}
+                                `}>
+                                    <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                                </div>
+                                <ChevronDown className={`w-4 h-4 transition-transform ${userDropdownOpen ? 'rotate-180' : ''} ${isDark ? 'text-emerald-500/70' : 'text-gray-400'}`} />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {userDropdownOpen && (
+                                <>
+                                    {/* Backdrop */}
+                                    <div 
+                                        className="fixed inset-0 z-40" 
+                                        onClick={() => setUserDropdownOpen(false)}
+                                    />
+                                    
+                                    {/* Menu */}
+                                    <div className={`absolute right-0 top-full mt-2 w-72 rounded-xl shadow-lg z-50 overflow-hidden
+                                        ${isDark 
+                                            ? 'bg-[#0d1414] border border-emerald-900/30' 
+                                            : 'bg-white border border-gray-200'
+                                        }
+                                    `}>
+                                        {/* User Info Header */}
+                                        <div className={`px-4 py-3 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-100'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center
+                                                    ${isDark ? 'bg-emerald-500/20 ring-1 ring-emerald-500/30' : 'bg-teal-100'}
+                                                `}>
+                                                    <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`font-medium text-sm truncate ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                                                        {user.name}
+                                                    </p>
+                                                    <p className={`text-xs truncate ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                                                        {user.email}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className={`mt-2 flex items-center gap-2`}>
+                                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full
+                                                    ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-teal-100 text-teal-700'}
+                                                `}>
+                                                    {user.role}
+                                                </span>
+                                                <span className={`text-xs ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                                    {user.company}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Menu Items */}
+                                        <div className="py-1">
+                                            <Link
+                                                href="/settings?tab=profile"
+                                                onClick={() => setUserDropdownOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                                                    ${isDark 
+                                                        ? 'text-emerald-100 hover:bg-emerald-500/10' 
+                                                        : 'text-gray-700 hover:bg-gray-50'
+                                                    }
+                                                `}
+                                            >
+                                                <UserIcon className="w-4 h-4" />
+                                                <span>Profil Saya</span>
+                                            </Link>
+                                            <Link
+                                                href="/settings?tab=security"
+                                                onClick={() => setUserDropdownOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                                                    ${isDark 
+                                                        ? 'text-emerald-100 hover:bg-emerald-500/10' 
+                                                        : 'text-gray-700 hover:bg-gray-50'
+                                                    }
+                                                `}
+                                            >
+                                                <Lock className="w-4 h-4" />
+                                                <span>Keamanan</span>
+                                            </Link>
+                                            <Link
+                                                href="/settings?tab=sessions"
+                                                onClick={() => setUserDropdownOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                                                    ${isDark 
+                                                        ? 'text-emerald-100 hover:bg-emerald-500/10' 
+                                                        : 'text-gray-700 hover:bg-gray-50'
+                                                    }
+                                                `}
+                                            >
+                                                <Smartphone className="w-4 h-4" />
+                                                <span>Sesi Aktif</span>
+                                            </Link>
+                                            <Link
+                                                href="/company-profile"
+                                                onClick={() => setUserDropdownOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                                                    ${isDark 
+                                                        ? 'text-emerald-100 hover:bg-emerald-500/10' 
+                                                        : 'text-gray-700 hover:bg-gray-50'
+                                                    }
+                                                `}
+                                            >
+                                                <Building2 className="w-4 h-4" />
+                                                <span>Profil Perusahaan</span>
+                                                <ExternalLink className={`w-3 h-3 ml-auto ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`} />
+                                            </Link>
+                                        </div>
+
+                                        {/* Logout */}
+                                        <div className={`border-t py-1 ${isDark ? 'border-emerald-900/30' : 'border-gray-100'}`}>
+                                            <button
+                                                onClick={() => {
+                                                    setUserDropdownOpen(false);
+                                                    window.location.href = '/logout';
+                                                }}
+                                                className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors
+                                                    ${isDark 
+                                                        ? 'text-red-400 hover:bg-red-500/10' 
+                                                        : 'text-red-600 hover:bg-red-50'
+                                                    }
+                                                `}
+                                            >
+                                                <LogOut className="w-4 h-4" />
+                                                <span>Logout</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </header>
