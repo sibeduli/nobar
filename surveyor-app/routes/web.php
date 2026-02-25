@@ -38,3 +38,7 @@ Route::get('/venues/map', function () {
 Route::get('/pic/activities', function () {
     return Inertia::render('PIC/Activities');
 });
+
+Route::get('/settings', function () {
+    return Inertia::render('Settings/Index');
+});

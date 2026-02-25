@@ -13,6 +13,7 @@ import {
     AlertTriangle,
     Map,
     MousePointerClick,
+    Settings,
     HelpCircle,
     Search,
     ChevronLeft,
@@ -45,6 +46,7 @@ const navigation = [
     },
     { name: 'Peta Venue', href: '/venues/map', icon: Map },
     { name: 'Aktivitas PIC', href: '/pic/activities', icon: MousePointerClick },
+    { name: 'Pengaturan', href: '/settings', icon: Settings },
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
