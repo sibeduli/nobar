@@ -30,3 +30,7 @@ Route::get('/help', function () {
 Route::get('/surveys', function () {
     return Inertia::render('Surveys/Index');
 });
+
+Route::get('/venues/map', function () {
+    return Inertia::render('Venues/Map');
+});

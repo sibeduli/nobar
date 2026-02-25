@@ -9,6 +9,7 @@ import {
     List,
     Activity,
     ClipboardList,
+    Map,
     HelpCircle,
     Search,
     ChevronLeft,
@@ -32,6 +33,7 @@ const navigation = [
         ]
     },
     { name: 'Data Survey', href: '/surveys', icon: ClipboardList },
+    { name: 'Peta Venue', href: '/venues/map', icon: Map },
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
