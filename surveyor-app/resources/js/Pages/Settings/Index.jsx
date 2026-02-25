@@ -48,7 +48,17 @@ export default function SettingsIndex() {
     const toast = useToast();
     const isDark = theme === 'dark';
 
-    const [activeTab, setActiveTab] = useState('profile');
+    // Get tab from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+    const [activeTab, setActiveTab] = useState(tabFromUrl || 'profile');
+
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tab);
+        window.history.pushState({}, '', url);
+    };
     const [user, setUser] = useState(mockUser);
     const [sessions, setSessions] = useState(mockSessions);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -187,7 +197,7 @@ export default function SettingsIndex() {
                         return (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
+                                onClick={() => handleTabChange(tab.id)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
                                     ${activeTab === tab.id
                                         ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white text-teal-700 shadow-sm'

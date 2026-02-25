@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { Link } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import FormInput, { FormTextarea, FormSelect } from '@/Components/FormInput';
 import Button from '@/Components/Button';
-import { Building2, MapPin, Phone, Mail, Globe, Edit3, Save, X } from 'lucide-react';
+import { Building2, MapPin, Phone, Mail, Globe, Edit3, Save, X, Settings, ExternalLink } from 'lucide-react';
 
 const initialCompanyData = {
     name: 'PT Surveyor Indonesia',
@@ -72,8 +73,6 @@ export default function CompanyProfile() {
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
             newErrors.email = 'Format email tidak valid';
         }
-        if (!formData.picName.trim()) newErrors.picName = 'Nama PIC wajib diisi';
-        if (!formData.picPhone.trim()) newErrors.picPhone = 'Nomor telepon PIC wajib diisi';
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -320,35 +319,39 @@ export default function CompanyProfile() {
                                 </div>
                             </div>
 
-                            {/* PIC Section */}
+                            {/* PIC Section - Read Only with link to Pengaturan */}
                             <div className="p-6">
-                                <h2 className={`text-sm font-semibold mb-4 ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>
-                                    Person In Charge (PIC)
-                                </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormInput
-                                        label="Nama PIC"
-                                        name="picName"
-                                        value={formData.picName}
-                                        onChange={handleChange}
-                                        error={errors.picName}
-                                        required
-                                    />
-                                    <FormInput
-                                        label="Telepon PIC"
-                                        name="picPhone"
-                                        value={formData.picPhone}
-                                        onChange={handleChange}
-                                        error={errors.picPhone}
-                                        required
-                                    />
-                                    <FormInput
-                                        label="Email PIC"
-                                        name="picEmail"
-                                        type="email"
-                                        value={formData.picEmail}
-                                        onChange={handleChange}
-                                    />
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className={`text-sm font-semibold ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>
+                                        Person In Charge (PIC)
+                                    </h2>
+                                    <Link
+                                        href="/settings"
+                                        className={`flex items-center gap-1.5 text-xs font-medium ${isDark ? 'text-emerald-400 hover:text-emerald-300' : 'text-teal-600 hover:text-teal-700'}`}
+                                    >
+                                        <Settings className="w-3.5 h-3.5" />
+                                        Ubah di Pengaturan
+                                        <ExternalLink className="w-3 h-3" />
+                                    </Link>
+                                </div>
+                                <div className={`p-4 rounded-lg ${isDark ? 'bg-emerald-950/30 border border-emerald-900/30' : 'bg-gray-50 border border-gray-200'}`}>
+                                    <p className={`text-xs mb-3 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                                        Data PIC dikelola melalui halaman Pengaturan akun Anda
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Nama PIC</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picName}</p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Telepon PIC</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picPhone}</p>
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Email PIC</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picEmail}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 

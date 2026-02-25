@@ -14,6 +14,9 @@ import {
     Map,
     MousePointerClick,
     Settings,
+    User as UserIcon,
+    Lock,
+    Smartphone,
     HelpCircle,
     Search,
     ChevronLeft,
@@ -46,7 +49,15 @@ const navigation = [
     },
     { name: 'Peta Venue', href: '/venues/map', icon: Map },
     { name: 'Aktivitas PIC', href: '/pic/activities', icon: MousePointerClick },
-    { name: 'Pengaturan', href: '/settings', icon: Settings },
+    { 
+        name: 'Pengaturan', 
+        icon: Settings,
+        children: [
+            { name: 'Profil', href: '/settings?tab=profile', icon: UserIcon },
+            { name: 'Keamanan', href: '/settings?tab=security', icon: Lock },
+            { name: 'Sesi Aktif', href: '/settings?tab=sessions', icon: Smartphone },
+        ]
+    },
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
