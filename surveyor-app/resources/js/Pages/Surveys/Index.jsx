@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import DataTable from '@/Components/DataTable';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import Button from '@/Components/Button';
+import { router } from '@inertiajs/react';
 import { 
     ClipboardList,
     MapPin,
@@ -19,7 +20,9 @@ import {
     Clock,
     Camera,
     FileText,
-    Store
+    Store,
+    AlertTriangle,
+    Users
 } from 'lucide-react';
 
 // Capacity tiers with pricing
@@ -63,18 +66,49 @@ const venueTypeConfig = {
     'Lainnya': 'gray',
 };
 
+// Violation types
+const violationTypes = {
+    capacity_exceeded: { label: 'Melebihi Kapasitas', color: 'red' },
+    ads_violation: { label: 'Pelanggaran Iklan', color: 'amber' },
+    other: { label: 'Lainnya', color: 'gray' },
+};
+
+// Mock violations data
+const mockViolations = [
+    { id: 101, venueName: 'Warkop Bola Mania', venueType: 'Cafe/Warkop', contactPerson: 'Pak Joko', phone: '08123456789', address: 'Jl. Sudirman No. 45, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '≤50', violationType: 'capacity_exceeded', reportedBy: 'Ahmad Sudrajat', reportDate: '2024-03-15', actualCount: 75, status: 'open', notes: 'Ditemukan 75 pengunjung saat pertandingan, melebihi kapasitas 50 orang' },
+    { id: 102, venueName: 'Kedai Malam Jaya', venueType: 'Cafe/Warkop', contactPerson: 'Mas Rudi', phone: '08111222333', address: 'Jl. Kebon Jeruk No. 10, Jakarta Barat', area: 'Jakarta Barat', capacityTier: '51-100', violationType: 'ads_violation', reportedBy: 'Budi Santoso', reportDate: '2024-03-14', actualCount: null, status: 'open', notes: 'Venue memasang banner sponsor brand minuman sendiri saat nobar, bukan sponsor resmi TVRI' },
+    { id: 103, venueName: 'Resto Piala Dunia', venueType: 'Restoran', contactPerson: 'Bu Siti', phone: '08234567890', address: 'Jl. Gatot Subroto No. 12, Jakarta Barat', area: 'Jakarta Barat', capacityTier: '51-100', violationType: 'capacity_exceeded', reportedBy: 'Citra Dewi', reportDate: '2024-03-12', actualCount: 150, status: 'resolved', notes: 'Ditemukan 150 pengunjung, sudah diberikan peringatan' },
+    { id: 104, venueName: 'Warung Pojok', venueType: 'Cafe/Warkop', contactPerson: 'Pak Darto', phone: '08555666777', address: 'Jl. Raya Depok No. 88, Depok', area: 'Depok', capacityTier: '≤50', violationType: 'ads_violation', reportedBy: 'Eka Putri', reportDate: '2024-03-10', actualCount: null, status: 'open', notes: 'Menampilkan iklan rokok di layar saat jeda pertandingan' },
+    { id: 105, venueName: 'Sport Cafe 88', venueType: 'Cafe/Warkop', contactPerson: 'Mr. Tony', phone: '08999888777', address: 'Jl. Senayan No. 55, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '51-100', violationType: 'capacity_exceeded', reportedBy: 'Fajar Ramadhan', reportDate: '2024-03-08', actualCount: 180, status: 'resolved', notes: 'Pelanggaran kedua, dikenakan denda' },
+    { id: 106, venueName: 'Hotel Grand Sport', venueType: 'Hotel/Penginapan', contactPerson: 'Ibu Maya', phone: '08567890123', address: 'Jl. Raya Serpong No. 55, Tangerang', area: 'Tangerang', capacityTier: '101-250', violationType: 'other', reportedBy: 'Hendra Wijaya', reportDate: '2024-03-05', actualCount: null, status: 'resolved', notes: 'Memungut biaya masuk tambahan di luar ketentuan lisensi' },
+];
+
 export default function SurveysIndex() {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
 
+    // Get tab from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+
     const [surveys] = useState(mockSurveys);
+    const [violations] = useState(mockViolations);
     const [selectedSurvey, setSelectedSurvey] = useState(null);
+    const [selectedViolation, setSelectedViolation] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [showViolationModal, setShowViolationModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
     const [selectedSurveys, setSelectedSurveys] = useState([]);
-    const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState(tabFromUrl === 'violations' ? 'violations' : 'all');
+
+    // Update URL when tab changes
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        const url = tab === 'violations' ? '/surveys?tab=violations' : '/surveys';
+        window.history.pushState({}, '', url);
+    };
 
     // Summary stats
     const stats = {
@@ -351,65 +385,260 @@ export default function SurveysIndex() {
         );
     };
 
+    // Violation stats
+    const violationStats = {
+        total: violations.length,
+        open: violations.filter(v => v.status === 'open').length,
+        resolved: violations.filter(v => v.status === 'resolved').length,
+    };
+
+    // Violation columns
+    const ViolationBadge = ({ type }) => {
+        const config = violationTypes[type];
+        if (!config) return null;
+        const colors = {
+            red: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700',
+            amber: isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-700',
+            gray: isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-100 text-gray-700',
+        };
+        return (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${colors[config.color]}`}>
+                <AlertTriangle className="w-3 h-3" />
+                {config.label}
+            </span>
+        );
+    };
+
+    const ViolationStatusBadge = ({ status }) => {
+        const config = {
+            open: { label: 'Terbuka', color: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700' },
+            resolved: { label: 'Selesai', color: isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700' },
+        };
+        const { label, color } = config[status] || config.open;
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${color}`}>
+                {label}
+            </span>
+        );
+    };
+
+    const violationColumns = [
+        {
+            key: 'venueName',
+            label: 'Venue',
+            render: (value, row) => (
+                <div>
+                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venueType}</div>
+                </div>
+            )
+        },
+        {
+            key: 'violationType',
+            label: 'Jenis Pelanggaran',
+            render: (value) => <ViolationBadge type={value} />
+        },
+        {
+            key: 'actualCount',
+            label: 'Detail',
+            render: (value, row) => (
+                <div>
+                    {row.violationType === 'capacity_exceeded' ? (
+                        <>
+                            <span className={`font-medium ${isDark ? 'text-red-400' : 'text-red-600'}`}>{value} orang</span>
+                            {row.capacityTier && (
+                                <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                                    Kapasitas: {capacityTiers[row.capacityTier]?.label}
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <span className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>-</span>
+                    )}
+                </div>
+            )
+        },
+        {
+            key: 'reportedBy',
+            label: 'Dilaporkan Oleh',
+            render: (value, row) => (
+                <div>
+                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                        {new Date(row.reportDate).toLocaleDateString('id-ID')}
+                    </div>
+                </div>
+            )
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (value) => <ViolationStatusBadge status={value} />
+        },
+        {
+            key: 'actions',
+            label: '',
+            render: (_, row) => (
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => {
+                            setSelectedViolation(row);
+                            setShowViolationModal(true);
+                        }}
+                        className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-emerald-500/10 text-emerald-400' : 'hover:bg-gray-100 text-gray-600'}`}
+                    >
+                        <Eye className="w-4 h-4" />
+                    </button>
+                </div>
+            )
+        },
+    ];
+
     return (
         <DashboardLayout>
             <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header */}
-                <div>
-                    <h1 className={`text-2xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                        Data Survey
-                    </h1>
-                    <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                        Kelola data hasil survey venue untuk lisensi Nobar Piala Dunia 2026
-                    </p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className={`text-2xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                            Data Survey
+                        </h1>
+                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                            Kelola data hasil survey venue untuk lisensi Nobar Piala Dunia 2026
+                        </p>
+                    </div>
                 </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <SummaryCard 
-                        title="Total Survey" 
-                        value={stats.total} 
-                        icon={ClipboardList} 
-                        color="blue" 
-                        active={activeTab === 'all'}
-                        onClick={() => setActiveTab('all')}
-                    />
-                    <SummaryCard 
-                        title="Disetujui" 
-                        value={stats.approved} 
-                        icon={CheckCircle} 
-                        color="emerald" 
-                        active={activeTab === 'approved'}
-                        onClick={() => setActiveTab('approved')}
-                    />
-                    <SummaryCard 
-                        title="Pending" 
-                        value={stats.pending} 
-                        icon={Clock} 
-                        color="amber" 
-                        active={activeTab === 'pending'}
-                        onClick={() => setActiveTab('pending')}
-                    />
-                    <SummaryCard 
-                        title="Ditolak" 
-                        value={stats.rejected} 
-                        icon={XCircle} 
-                        color="red" 
-                        active={activeTab === 'rejected'}
-                        onClick={() => setActiveTab('rejected')}
-                    />
+                {/* Tab Switcher */}
+                <div className={`flex gap-1 p-1 rounded-xl w-fit ${isDark ? 'bg-emerald-950/50' : 'bg-gray-100'}`}>
+                    <button
+                        onClick={() => handleTabChange('all')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${activeTab !== 'violations'
+                                ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white text-teal-700 shadow-sm'
+                                : isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-600 hover:text-gray-900'
+                            }
+                        `}
+                    >
+                        <FileText className="w-4 h-4" />
+                        Semua Survey
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('violations')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${activeTab === 'violations'
+                                ? isDark ? 'bg-red-500/20 text-red-400' : 'bg-white text-red-700 shadow-sm'
+                                : isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-600 hover:text-gray-900'
+                            }
+                        `}
+                    >
+                        <AlertTriangle className="w-4 h-4" />
+                        Pelanggaran
+                        {violationStats.open > 0 && (
+                            <span className={`px-1.5 py-0.5 text-xs rounded-full ${isDark ? 'bg-red-500 text-white' : 'bg-red-600 text-white'}`}>
+                                {violationStats.open}
+                            </span>
+                        )}
+                    </button>
                 </div>
 
-                {/* Data Table */}
-                <DataTable
-                    data={filteredSurveys}
-                    columns={columns}
-                    filters={filters}
-                    searchPlaceholder="Cari merchant, alamat, atau agen..."
-                    selectable
-                    bulkActions={bulkActions}
-                    onSelectionChange={(selected) => console.log('Selected:', selected)}
-                />
+                {activeTab === 'violations' ? (
+                    <>
+                        {/* Violation Stats */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                                        <AlertTriangle className={`w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{violationStats.total}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Total Pelanggaran</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                                        <Clock className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{violationStats.open}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Terbuka</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                                        <CheckCircle className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{violationStats.resolved}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Selesai</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Violations Table */}
+                        <DataTable
+                            data={violations}
+                            columns={violationColumns}
+                            searchPlaceholder="Cari pelanggaran..."
+                            searchKeys={['venueName', 'reportedBy', 'notes']}
+                        />
+                    </>
+                ) : (
+                    <>
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <SummaryCard 
+                                title="Total Survey" 
+                                value={stats.total} 
+                                icon={ClipboardList} 
+                                color="blue" 
+                                active={activeTab === 'all'}
+                                onClick={() => setActiveTab('all')}
+                            />
+                            <SummaryCard 
+                                title="Disetujui" 
+                                value={stats.approved} 
+                                icon={CheckCircle} 
+                                color="emerald" 
+                                active={activeTab === 'approved'}
+                                onClick={() => setActiveTab('approved')}
+                            />
+                            <SummaryCard 
+                                title="Pending" 
+                                value={stats.pending} 
+                                icon={Clock} 
+                                color="amber" 
+                                active={activeTab === 'pending'}
+                                onClick={() => setActiveTab('pending')}
+                            />
+                            <SummaryCard 
+                                title="Ditolak" 
+                                value={stats.rejected} 
+                                icon={XCircle} 
+                                color="red" 
+                                active={activeTab === 'rejected'}
+                                onClick={() => setActiveTab('rejected')}
+                            />
+                        </div>
+
+                        {/* Data Table */}
+                        <DataTable
+                            data={filteredSurveys}
+                            columns={columns}
+                            filters={filters}
+                            searchPlaceholder="Cari venue, alamat, atau surveyor..."
+                            selectable
+                            bulkActions={bulkActions}
+                            onSelectionChange={(selected) => console.log('Selected:', selected)}
+                        />
+                    </>
+                )}
             </div>
 
             {/* Delete Confirmation Modal */}
@@ -557,6 +786,91 @@ export default function SurveysIndex() {
                                 </>
                             )}
                         </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Violation Detail Modal */}
+            <Modal
+                isOpen={showViolationModal}
+                onClose={() => setShowViolationModal(false)}
+                title="Detail Pelanggaran"
+                size="md"
+            >
+                {selectedViolation && (
+                    <div className="space-y-4">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <h3 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                                    {selectedViolation.venueName}
+                                </h3>
+                                <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedViolation.venueType}</p>
+                            </div>
+                            <ViolationStatusBadge status={selectedViolation.status} />
+                        </div>
+
+                        <div className={`p-4 rounded-lg ${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                                <AlertTriangle className={`w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                                <ViolationBadge type={selectedViolation.violationType} />
+                            </div>
+                            <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-700'}`}>{selectedViolation.notes}</p>
+                        </div>
+
+                        <div className={`grid grid-cols-2 gap-3`}>
+                            <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Jumlah Pengunjung</p>
+                                <p className={`text-xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>{selectedViolation.actualCount} orang</p>
+                            </div>
+                            <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Kapasitas Lisensi</p>
+                                <p className={`text-xl font-bold ${isDark ? 'text-emerald-400' : 'text-teal-600'}`}>
+                                    {selectedViolation.capacityTier ? capacityTiers[selectedViolation.capacityTier]?.label : 'Tidak ada lisensi'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className={`space-y-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                            <div className="flex items-start gap-3">
+                                <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                <div>
+                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedViolation.address}</p>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedViolation.area}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <User className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                <div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Dilaporkan Oleh</p>
+                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedViolation.reportedBy}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Calendar className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                <div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Tanggal Laporan</p>
+                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
+                                        {new Date(selectedViolation.reportDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {selectedViolation.status === 'open' && (
+                            <div className={`flex gap-2 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                                <Button
+                                    variant="primary"
+                                    className="flex-1"
+                                    onClick={() => {
+                                        toast.success('Pelanggaran ditandai selesai');
+                                        setShowViolationModal(false);
+                                    }}
+                                >
+                                    <CheckCircle className="w-4 h-4" />
+                                    Tandai Selesai
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 )}
             </Modal>

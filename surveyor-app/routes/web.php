@@ -34,3 +34,7 @@ Route::get('/surveys', function () {
 Route::get('/venues/map', function () {
     return Inertia::render('Venues/Map');
 });
+
+Route::get('/pic/activities', function () {
+    return Inertia::render('PIC/Activities');
+});

@@ -9,7 +9,10 @@ import {
     List,
     Activity,
     ClipboardList,
+    FileCheck,
+    AlertTriangle,
     Map,
+    MousePointerClick,
     HelpCircle,
     Search,
     ChevronLeft,
@@ -32,8 +35,16 @@ const navigation = [
             { name: 'Aktivitas Agen', href: '/agents/activities', icon: Activity },
         ]
     },
-    { name: 'Data Survey', href: '/surveys', icon: ClipboardList },
+    { 
+        name: 'Data Survey', 
+        icon: ClipboardList,
+        children: [
+            { name: 'Semua Survey', href: '/surveys', icon: FileCheck },
+            { name: 'Pelanggaran', href: '/surveys?tab=violations', icon: AlertTriangle },
+        ]
+    },
     { name: 'Peta Venue', href: '/venues/map', icon: Map },
+    { name: 'Aktivitas PIC', href: '/pic/activities', icon: MousePointerClick },
     { name: 'Pusat Bantuan', href: '/help', icon: HelpCircle },
 ];
 
