@@ -48,6 +48,7 @@ const mockValidateQR = (qrData) => {
 };
 
 const REPORT_TYPES = {
+    // Commercial
     approved: { label: 'Disetujui', color: 'emerald', icon: Check },
     offering: { label: 'Penawaran', color: 'blue', icon: FileText },
     violation_invalid_qr: { label: 'Pelanggaran - QR Invalid', color: 'red', icon: ShieldX },
@@ -56,6 +57,9 @@ const REPORT_TYPES = {
     violation_no_license: { label: 'Pelanggaran - Tanpa Lisensi', color: 'red', icon: Ban },
     violation_invalid_venue: { label: 'Pelanggaran - Venue Invalid', color: 'red', icon: Store },
     other: { label: 'Lainnya', color: 'gray', icon: HelpCircle },
+    // Non-Commercial
+    non_commercial_planning: { label: 'Non-Komersial - Rencana Nobar', color: 'blue', icon: FileText },
+    non_commercial_active: { label: 'Non-Komersial - Nobar Aktif', color: 'blue', icon: Users },
 };
 
 export default function AgentReport() {
@@ -65,7 +69,8 @@ export default function AgentReport() {
     const fileInputRef = useRef(null);
 
     // Flow state
-    const [step, setStep] = useState('start'); // start, scan, qr_valid, qr_invalid, no_qr_check, form
+    const [step, setStep] = useState('start'); // start, commercial_check, scan, qr_valid, qr_invalid, no_qr_check, non_commercial, form
+    const [isCommercial, setIsCommercial] = useState(null);
     const [hasQR, setHasQR] = useState(null);
     const [venueData, setVenueData] = useState(null);
     const [reportType, setReportType] = useState(null);
@@ -106,6 +111,7 @@ export default function AgentReport() {
 
     const resetFlow = () => {
         setStep('start');
+        setIsCommercial(null);
         setHasQR(null);
         setVenueData(null);
         setReportType(null);
@@ -140,14 +146,63 @@ export default function AgentReport() {
         }
     };
 
-    // ==================== STEP: START ====================
+    // ==================== STEP: START - Commercial or Non-Commercial ====================
     if (step === 'start') {
         return (
             <AgentLayout>
                 <div className="space-y-6 pt-4">
                     <div className="text-center">
                         <h1 className={`text-xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Laporan Baru</h1>
-                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Apakah venue memiliki QR lisensi?</p>
+                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Jenis nobar yang ditemukan?</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => { setIsCommercial(true); setStep('commercial_check'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
+                                <Store className={`w-7 h-7 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Komersial</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Venue berbayar / bisnis</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+
+                        <button
+                            onClick={() => { setIsCommercial(false); setStep('non_commercial'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                                <Users className={`w-7 h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Komunitas / pribadi / gratis</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+                    </div>
+                </div>
+            </AgentLayout>
+        );
+    }
+
+    // ==================== STEP: COMMERCIAL CHECK - QR or No QR ====================
+    if (step === 'commercial_check') {
+        return (
+            <AgentLayout>
+                <div className="space-y-6 pt-4">
+                    <div className="flex items-center gap-3">
+                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Komersial</h1>
+                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Apakah venue memiliki QR lisensi?</p>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
@@ -175,6 +230,61 @@ export default function AgentReport() {
                             <div className="flex-1 text-left">
                                 <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Tidak Ada QR</p>
                                 <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Venue tidak punya QR lisensi</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+                    </div>
+                </div>
+            </AgentLayout>
+        );
+    }
+
+    // ==================== STEP: NON-COMMERCIAL - Planning or Active ====================
+    if (step === 'non_commercial') {
+        return (
+            <AgentLayout>
+                <div className="space-y-6 pt-4">
+                    <div className="flex items-center gap-3">
+                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial</h1>
+                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Status nobar saat ini?</p>
+                        </div>
+                    </div>
+
+                    <div className={`p-4 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                        <p className={`text-sm ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                            Laporan ini hanya untuk dokumentasi, bukan pelanggaran.
+                        </p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => { setReportType('non_commercial_planning'); setStep('form'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                                <FileText className={`w-7 h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Rencana Nobar</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Akan mengadakan nobar</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+
+                        <button
+                            onClick={() => { setReportType('non_commercial_active'); setStep('form'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
+                                <Users className={`w-7 h-7 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Nobar Aktif</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Sedang berlangsung</p>
                             </div>
                             <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
                         </button>
