@@ -25,7 +25,10 @@ import {
     Key,
     LogOut,
     Lock,
-    EyeOff
+    EyeOff,
+    Copy,
+    QrCode,
+    Link2
 } from 'lucide-react';
 
 // Mock data - will be replaced with server-side data
@@ -66,6 +69,37 @@ export default function AgentsIndex() {
     const [showForceLogoutModal, setShowForceLogoutModal] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showLoginLinkModal, setShowLoginLinkModal] = useState(false);
+
+    // MOCK: Get agent login URL - will use actual domain in production
+    const getAgentLoginUrl = () => {
+        return `${window.location.origin}/agent/login`;
+    };
+
+    // MOCK: Copy login link to clipboard
+    const copyLoginLink = async () => {
+        try {
+            await navigator.clipboard.writeText(getAgentLoginUrl());
+            toast.success('Link login agen berhasil disalin');
+        } catch (err) {
+            toast.error('Gagal menyalin link');
+        }
+    };
+
+    // MOCK: Download QR using external API - will use local QR generation in production
+    const downloadQRCode = () => {
+        const url = getAgentLoginUrl();
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(url)}`;
+        
+        const link = document.createElement('a');
+        link.href = qrApiUrl;
+        link.download = 'agent-login-qr.png';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success('QR Code sedang diunduh');
+    };
 
     // Summary stats
     const stats = {
@@ -344,12 +378,18 @@ export default function AgentsIndex() {
                             Kelola agen lapangan perusahaan Anda
                         </p>
                     </div>
-                    <Link href="/agents/create">
-                        <Button>
-                            <Plus className="w-4 h-4" />
-                            Tambah Agen
+                    <div className="flex items-center gap-2">
+                        <Button variant="secondary" onClick={() => setShowLoginLinkModal(true)}>
+                            <Link2 className="w-4 h-4" />
+                            Link Login Agen
                         </Button>
-                    </Link>
+                        <Link href="/agents/create">
+                            <Button>
+                                <Plus className="w-4 h-4" />
+                                Tambah Agen
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
@@ -581,6 +621,50 @@ export default function AgentsIndex() {
                 cancelText="Batal"
                 variant="warning"
             />
+
+            {/* Login Link Modal */}
+            <Modal
+                isOpen={showLoginLinkModal}
+                onClose={() => setShowLoginLinkModal(false)}
+                title="Link Login Agen"
+            >
+                <div className="space-y-6">
+                    <p className={`text-sm ${isDark ? 'text-emerald-500/70' : 'text-gray-600'}`}>
+                        Bagikan link atau QR code ini kepada agen untuk login ke aplikasi mobile.
+                    </p>
+
+                    {/* QR Code */}
+                    <div className="flex justify-center">
+                        <div className={`p-4 rounded-xl ${isDark ? 'bg-white' : 'bg-gray-50'}`}>
+                            <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getAgentLoginUrl())}`}
+                                alt="QR Code Login Agen"
+                                className="w-48 h-48"
+                            />
+                        </div>
+                    </div>
+
+                    {/* URL Display */}
+                    <div className={`p-3 rounded-lg flex items-center gap-3 ${isDark ? 'bg-emerald-950/30 border border-emerald-900/50' : 'bg-gray-100 border border-gray-200'}`}>
+                        <Link2 className={`w-5 h-5 flex-shrink-0 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                        <span className={`text-sm flex-1 truncate ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
+                            {getAgentLoginUrl()}
+                        </span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3">
+                        <Button variant="secondary" className="flex-1" onClick={copyLoginLink}>
+                            <Copy className="w-4 h-4" />
+                            Salin Link
+                        </Button>
+                        <Button className="flex-1" onClick={downloadQRCode}>
+                            <Download className="w-4 h-4" />
+                            Unduh QR
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </DashboardLayout>
     );
 }
