@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\PicAuthController;
+use App\Http\Controllers\CompanyProfileController;
+use App\Http\Controllers\RegionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -19,6 +21,11 @@ Route::get('/pending-approval', [PicAuthController::class, 'pendingApproval'])->
 Route::post('/pending-approval/check', [PicAuthController::class, 'checkStatus'])->name('pic.check-status');
 Route::post('/pending-approval/logout', [PicAuthController::class, 'logoutPending'])->name('pic.logout-pending');
 
+// ==================== Region API Routes ====================
+Route::get('/api/provinces', [RegionController::class, 'provinces']);
+Route::get('/api/cities/{provinceId}', [RegionController::class, 'cities']);
+Route::get('/api/districts/{cityId}', [RegionController::class, 'districts']);
+
 // ==================== PIC Protected Routes ====================
 Route::middleware('auth:pic')->group(function () {
     Route::post('/logout', [PicAuthController::class, 'logout'])->name('pic.logout');
@@ -27,9 +34,8 @@ Route::middleware('auth:pic')->group(function () {
         return Inertia::render('Welcome');
     })->name('pic.dashboard');
 
-    Route::get('/company-profile', function () {
-        return Inertia::render('CompanyProfile');
-    });
+    Route::get('/company-profile', [CompanyProfileController::class, 'show'])->name('pic.company-profile');
+    Route::put('/company-profile', [CompanyProfileController::class, 'update'])->name('pic.company-profile.update');
 
     Route::get('/agents', function () {
         return Inertia::render('Agents/Index');

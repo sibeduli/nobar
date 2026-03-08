@@ -184,7 +184,7 @@ export function FormSelect({
                 disabled={disabled}
                 className={`w-full px-3 py-2 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2
                     ${isDark 
-                        ? `bg-emerald-950/30 border text-emerald-100 
+                        ? `bg-[#0d1414] border text-emerald-100 
                            ${error ? 'border-red-500/50 focus:ring-red-500/50' : 'border-emerald-900/50 focus:ring-emerald-500/50'}` 
                         : `bg-white border text-gray-900 
                            ${error ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-teal-500'}`
@@ -192,9 +192,9 @@ export function FormSelect({
                     ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
             >
-                <option value="">{placeholder}</option>
+                <option value="" className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>{placeholder}</option>
                 {options.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value} className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>{opt.label}</option>
                 ))}
             </select>
             {error && (

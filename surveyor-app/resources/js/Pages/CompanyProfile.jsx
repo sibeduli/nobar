@@ -1,30 +1,13 @@
-import { useState } from 'react';
-import { Link } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Link, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import FormInput, { FormTextarea, FormSelect } from '@/Components/FormInput';
+import AddressInput from '@/Components/AddressInput';
 import Button from '@/Components/Button';
 import { Building2, MapPin, Phone, Mail, Globe, Edit3, Save, X, Settings, ExternalLink } from 'lucide-react';
-
-const initialCompanyData = {
-    name: 'PT Surveyor Indonesia',
-    legalName: 'PT Surveyor Indonesia Tbk',
-    npwp: '01.234.567.8-901.000',
-    businessType: 'surveyor',
-    address: 'Jl. Gatot Subroto Kav. 56, Jakarta Selatan',
-    city: 'Jakarta',
-    province: 'DKI Jakarta',
-    postalCode: '12950',
-    phone: '021-5551234',
-    email: 'info@surveyor.co.id',
-    website: 'https://surveyor.co.id',
-    description: 'Perusahaan surveyor terkemuka yang menyediakan layanan survei dan inspeksi untuk berbagai industri.',
-    picName: 'Ahmad Sudrajat',
-    picPhone: '08123456789',
-    picEmail: 'ahmad.sudrajat@surveyor.co.id',
-};
 
 const businessTypeOptions = [
     { value: 'surveyor', label: 'Surveyor' },
@@ -33,70 +16,68 @@ const businessTypeOptions = [
     { value: 'consultant', label: 'Konsultan' },
 ];
 
-const provinceOptions = [
-    { value: 'DKI Jakarta', label: 'DKI Jakarta' },
-    { value: 'Jawa Barat', label: 'Jawa Barat' },
-    { value: 'Jawa Tengah', label: 'Jawa Tengah' },
-    { value: 'Jawa Timur', label: 'Jawa Timur' },
-    { value: 'Banten', label: 'Banten' },
-];
 
-export default function CompanyProfile() {
+const emptyCompanyData = {
+    name: '',
+    legalName: '',
+    npwp: '',
+    businessType: '',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+    phone: '',
+    email: '',
+    website: '',
+    description: '',
+};
+
+export default function CompanyProfile({ company, pic }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
+    const { flash } = usePage().props;
 
+    const initialData = company || emptyCompanyData;
+    
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState(initialCompanyData);
-    const [errors, setErrors] = useState({});
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+
+    const { data: formData, setData: setFormData, put, processing, errors, reset } = useForm(initialData);
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+            setIsEditing(false);
+            setShowSaveModal(false);
+        }
+    }, [flash?.success]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: null }));
-        }
+        setFormData(name, value);
     };
 
-    const validate = () => {
-        const newErrors = {};
-        if (!formData.name.trim()) newErrors.name = 'Nama perusahaan wajib diisi';
-        if (!formData.legalName.trim()) newErrors.legalName = 'Nama legal wajib diisi';
-        if (!formData.npwp.trim()) newErrors.npwp = 'NPWP wajib diisi';
-        if (!formData.address.trim()) newErrors.address = 'Alamat wajib diisi';
-        if (!formData.phone.trim()) newErrors.phone = 'Nomor telepon wajib diisi';
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email wajib diisi';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Format email tidak valid';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSave = async () => {
-        if (!validate()) {
-            toast.error('Mohon lengkapi semua field yang wajib diisi');
-            return;
-        }
+    const handleSave = () => {
         setShowSaveModal(true);
     };
 
-    const confirmSave = async () => {
-        setIsSaving(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsSaving(false);
-        setIsEditing(false);
-        toast.success('Profil perusahaan berhasil disimpan');
+    const confirmSave = () => {
+        put('/company-profile', {
+            onSuccess: () => {
+                setShowSaveModal(false);
+                setIsEditing(false);
+            },
+            onError: () => {
+                setShowSaveModal(false);
+                toast.error('Gagal menyimpan perubahan');
+            },
+        });
     };
 
     const handleCancel = () => {
-        if (JSON.stringify(formData) !== JSON.stringify(initialCompanyData)) {
+        if (JSON.stringify(formData) !== JSON.stringify(initialData)) {
             setShowCancelModal(true);
         } else {
             setIsEditing(false);
@@ -104,9 +85,9 @@ export default function CompanyProfile() {
     };
 
     const confirmCancel = () => {
-        setFormData(initialCompanyData);
-        setErrors({});
+        reset();
         setIsEditing(false);
+        setShowCancelModal(false);
         toast.info('Perubahan dibatalkan');
     };
 
@@ -148,7 +129,7 @@ export default function CompanyProfile() {
                                 <X className="w-4 h-4" />
                                 Batal
                             </Button>
-                            <Button onClick={handleSave} loading={isSaving}>
+                            <Button onClick={handleSave} loading={processing}>
                                 <Save className="w-4 h-4" />
                                 Simpan
                             </Button>
@@ -179,17 +160,15 @@ export default function CompanyProfile() {
                             {/* Address Section */}
                             <div className="p-6">
                                 <h2 className={`text-sm font-semibold mb-4 ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>
-                                    Alamat & Kontak
+                                    Alamat
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                                     <div className="md:col-span-2">
                                         <InfoRow icon={MapPin} label="Alamat Lengkap" value={formData.address} />
                                     </div>
-                                    <InfoRow icon={MapPin} label="Kota" value={formData.city} />
                                     <InfoRow icon={MapPin} label="Provinsi" value={formData.province} />
-                                    <InfoRow icon={Phone} label="Telepon" value={formData.phone} />
-                                    <InfoRow icon={Mail} label="Email" value={formData.email} />
-                                    <InfoRow icon={Globe} label="Website" value={formData.website} />
+                                    <InfoRow icon={MapPin} label="Kota/Kabupaten" value={formData.city} />
+                                    <InfoRow icon={MapPin} label="Kode Pos" value={formData.postalCode} />
                                 </div>
                             </div>
 
@@ -199,9 +178,9 @@ export default function CompanyProfile() {
                                     Person In Charge (PIC)
                                 </h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                                    <InfoRow icon={Building2} label="Nama PIC" value={formData.picName} />
-                                    <InfoRow icon={Phone} label="Telepon PIC" value={formData.picPhone} />
-                                    <InfoRow icon={Mail} label="Email PIC" value={formData.picEmail} />
+                                    <InfoRow icon={Building2} label="Nama PIC" value={pic?.name} />
+                                    <InfoRow icon={Phone} label="Telepon PIC" value={pic?.phone} />
+                                    <InfoRow icon={Mail} label="Email PIC" value={pic?.email} />
                                 </div>
                             </div>
 
@@ -238,7 +217,6 @@ export default function CompanyProfile() {
                                         value={formData.legalName}
                                         onChange={handleChange}
                                         error={errors.legalName}
-                                        required
                                     />
                                     <FormInput
                                         label="NPWP"
@@ -261,63 +239,19 @@ export default function CompanyProfile() {
                             {/* Address Section */}
                             <div className="p-6">
                                 <h2 className={`text-sm font-semibold mb-4 ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>
-                                    Alamat & Kontak
+                                    Alamat
                                 </h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormTextarea
-                                        label="Alamat Lengkap"
-                                        name="address"
-                                        value={formData.address}
-                                        onChange={handleChange}
-                                        error={errors.address}
-                                        required
-                                        className="md:col-span-2"
-                                    />
-                                    <FormInput
-                                        label="Kota"
-                                        name="city"
-                                        value={formData.city}
-                                        onChange={handleChange}
-                                    />
-                                    <FormSelect
-                                        label="Provinsi"
-                                        name="province"
-                                        value={formData.province}
-                                        onChange={handleChange}
-                                        options={provinceOptions}
-                                    />
-                                    <FormInput
-                                        label="Kode Pos"
-                                        name="postalCode"
-                                        value={formData.postalCode}
-                                        onChange={handleChange}
-                                    />
-                                    <FormInput
-                                        label="Telepon"
-                                        name="phone"
-                                        value={formData.phone}
-                                        onChange={handleChange}
-                                        error={errors.phone}
-                                        required
-                                    />
-                                    <FormInput
-                                        label="Email"
-                                        name="email"
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        error={errors.email}
-                                        required
-                                    />
-                                    <FormInput
-                                        label="Website"
-                                        name="website"
-                                        value={formData.website}
-                                        onChange={handleChange}
-                                        placeholder="https://"
-                                    />
-                                </div>
+                                <AddressInput
+                                    province={formData.province}
+                                    city={formData.city}
+                                    postalCode={formData.postalCode}
+                                    address={formData.address}
+                                    onChange={(field, value) => setFormData(field, value)}
+                                    errors={errors}
+                                    required
+                                />
                             </div>
+
 
                             {/* PIC Section - Read Only with link to Pengaturan */}
                             <div className="p-6">
@@ -341,15 +275,15 @@ export default function CompanyProfile() {
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div>
                                             <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Nama PIC</p>
-                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picName}</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{pic?.name || '-'}</p>
                                         </div>
                                         <div>
                                             <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Telepon PIC</p>
-                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picPhone}</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{pic?.phone || '-'}</p>
                                         </div>
                                         <div>
                                             <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Email PIC</p>
-                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{formData.picEmail}</p>
+                                            <p className={`text-sm font-medium mt-0.5 ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{pic?.email || '-'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -383,7 +317,7 @@ export default function CompanyProfile() {
                             <X className="w-4 h-4" />
                             Batal
                         </Button>
-                        <Button onClick={handleSave} loading={isSaving} className="flex-1 justify-center">
+                        <Button onClick={handleSave} loading={processing} className="flex-1 justify-center">
                             <Save className="w-4 h-4" />
                             Simpan
                         </Button>
