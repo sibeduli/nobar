@@ -1,4 +1,5 @@
-import { Link } from '@inertiajs/react';
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import { useTheme } from '@/Contexts/ThemeContext';
 import Button from '@/Components/Button';
 import {
@@ -8,18 +9,25 @@ import {
     Sun,
     Moon,
     RefreshCw,
+    CheckCircle,
 } from 'lucide-react';
 
-export default function PendingApproval() {
+export default function PendingApproval({ email }) {
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === 'dark';
+    const [checking, setChecking] = useState(false);
+    const [approved, setApproved] = useState(false);
 
     const handleLogout = () => {
-        window.location.href = '/logout';
+        router.post('/pending-approval/logout');
     };
 
-    const handleRefresh = () => {
-        window.location.reload();
+    const handleCheckStatus = () => {
+        setChecking(true);
+        // Simply reload the page - the controller will auto-redirect if approved
+        router.visit('/pending-approval', {
+            onFinish: () => setChecking(false),
+        });
     };
 
     return (
@@ -68,27 +76,59 @@ export default function PendingApproval() {
                         </p>
 
                         {/* Status Info */}
-                        <div className={`p-4 rounded-xl mb-6 ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                                <div className={`w-2 h-2 rounded-full animate-pulse ${isDark ? 'bg-amber-400' : 'bg-amber-500'}`}></div>
-                                <span className={`text-sm font-medium ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                                    Status: Pending Review
-                                </span>
-                            </div>
-                            <p className={`text-xs ${isDark ? 'text-emerald-500/50' : 'text-gray-500'}`}>
-                                Biasanya membutuhkan waktu 1-2 hari kerja
-                            </p>
+                        <div className={`p-4 rounded-xl mb-6 ${approved ? (isDark ? 'bg-emerald-950/50' : 'bg-emerald-50') : (isDark ? 'bg-emerald-950/30' : 'bg-gray-50')}`}>
+                            {approved ? (
+                                <>
+                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                        <CheckCircle className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                        <span className={`text-sm font-medium ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                                            Akun Disetujui!
+                                        </span>
+                                    </div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/50' : 'text-gray-500'}`}>
+                                        Mengalihkan ke dashboard...
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-center gap-2 mb-2">
+                                        <div className={`w-2 h-2 rounded-full animate-pulse ${isDark ? 'bg-amber-400' : 'bg-amber-500'}`}></div>
+                                        <span className={`text-sm font-medium ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
+                                            Status: Pending Review
+                                        </span>
+                                    </div>
+                                    {email && (
+                                        <p className={`text-xs mb-1 ${isDark ? 'text-emerald-500/60' : 'text-gray-600'}`}>
+                                            {email}
+                                        </p>
+                                    )}
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/50' : 'text-gray-500'}`}>
+                                        Biasanya membutuhkan waktu 1-2 hari kerja
+                                    </p>
+                                </>
+                            )}
                         </div>
 
                         {/* Actions */}
                         <div className="space-y-3">
                             <Button
-                                variant="ghost"
+                                variant={approved ? "primary" : "ghost"}
                                 className="w-full justify-center"
-                                onClick={handleRefresh}
+                                onClick={handleCheckStatus}
+                                loading={checking}
+                                disabled={approved}
                             >
-                                <RefreshCw className="w-4 h-4" />
-                                Cek Status
+                                {approved ? (
+                                    <>
+                                        <CheckCircle className="w-4 h-4" />
+                                        Disetujui
+                                    </>
+                                ) : (
+                                    <>
+                                        <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
+                                        Cek Status
+                                    </>
+                                )}
                             </Button>
 
                             <button

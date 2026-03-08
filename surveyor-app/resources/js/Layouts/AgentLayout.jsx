@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { useTheme } from '@/Contexts/ThemeContext';
 import {
     Home,
@@ -102,16 +102,29 @@ export default function AgentLayout({ children }) {
                             );
                         }
 
+                        if (item.isLogout) {
+                            return (
+                                <button
+                                    key={item.name}
+                                    onClick={() => router.post('/agent/logout')}
+                                    className={`flex flex-col items-center justify-center py-2 transition-colors
+                                        ${isDark ? 'text-red-400' : 'text-red-500'}
+                                    `}
+                                >
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-[10px] mt-1 font-medium">{item.name}</span>
+                                </button>
+                            );
+                        }
+
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 className={`flex flex-col items-center justify-center py-2 transition-colors
-                                    ${item.isLogout
-                                        ? isDark ? 'text-red-400' : 'text-red-500'
-                                        : isActive
-                                            ? isDark ? 'text-emerald-400' : 'text-teal-600'
-                                            : isDark ? 'text-emerald-500/50 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'
+                                    ${isActive
+                                        ? isDark ? 'text-emerald-400' : 'text-teal-600'
+                                        : isDark ? 'text-emerald-500/50 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'
                                     }
                                 `}
                             >

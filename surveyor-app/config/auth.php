@@ -40,6 +40,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'pic' => [
+            'driver' => 'session',
+            'provider' => 'pics',
+        ],
+        'agent' => [
+            'driver' => 'session',
+            'provider' => 'agents',
+        ],
     ],
 
     /*
@@ -64,11 +72,14 @@ return [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
-
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'pics' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Pic::class,
+        ],
+        'agents' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Agent::class,
+        ],
     ],
 
     /*
