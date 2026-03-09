@@ -7,7 +7,7 @@ import FormInput, { FormTextarea, FormSelect } from '@/Components/FormInput';
 import MultiSelect from '@/Components/MultiSelect';
 import Button from '@/Components/Button';
 import { Link, router } from '@inertiajs/react';
-import { ArrowLeft, Save, UserPlus, Upload, X, CreditCard, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Save, UserPlus, X, CreditCard, Lock } from 'lucide-react';
 
 const areaOptions = [
     { value: 'Jakarta Selatan', label: 'Jakarta Selatan' },
@@ -53,8 +53,6 @@ export default function AgentsCreate() {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [ktpPreview, setKtpPreview] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -137,7 +135,6 @@ export default function AgentsCreate() {
         } else if (formData.nik.length !== 16) {
             newErrors.nik = 'NIK harus 16 digit';
         }
-        if (!formData.address.trim()) newErrors.address = 'Alamat wajib diisi';
         if (!formData.areas || formData.areas.length === 0) newErrors.areas = 'Minimal pilih 1 area tugas';
         if (!formData.ktpPhoto) newErrors.ktpPhoto = 'Foto KTP wajib diunggah';
 
@@ -154,13 +151,37 @@ export default function AgentsCreate() {
         setShowSaveModal(true);
     };
 
-    const confirmSave = async () => {
+    const confirmSave = () => {
         setIsSaving(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsSaving(false);
-        toast.success('Agen baru berhasil didaftarkan');
-        router.visit('/agents');
+        setShowSaveModal(false);
+        
+        const data = new FormData();
+        data.append('name', formData.name);
+        data.append('phone', formData.phone);
+        data.append('email', formData.email || '');
+        data.append('password', formData.password);
+        data.append('nik', formData.nik);
+        data.append('address', formData.address);
+        formData.areas.forEach((area, i) => data.append(`areas[${i}]`, area));
+        data.append('status', formData.status);
+        data.append('notes', formData.notes || '');
+        if (formData.ktpPhoto) {
+            data.append('ktpPhoto', formData.ktpPhoto);
+        }
+
+        router.post('/agents', data, {
+            onSuccess: () => {
+                toast.success('Agen baru berhasil didaftarkan');
+            },
+            onError: (errors) => {
+                setErrors(errors);
+                setIsSaving(false);
+                toast.error('Gagal mendaftarkan agen');
+            },
+            onFinish: () => {
+                setIsSaving(false);
+            },
+        });
     };
 
     const handleCancel = () => {
@@ -334,7 +355,16 @@ export default function AgentsCreate() {
                                     error={errors.email}
                                     placeholder="email@example.com (opsional)"
                                 />
-                                
+                                <FormTextarea
+                                    label="Alamat"
+                                    name="address"
+                                    value={formData.address}
+                                    onChange={handleChange}
+                                    error={errors.address}
+                                    placeholder="Alamat lengkap agen (opsional)"
+                                    className="md:col-span-2"
+                                />
+
                                 {/* Password Section */}
                                 <div className={`md:col-span-2 pt-4 border-t border-dashed ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                                     <div className="flex items-center gap-2 mb-3">
@@ -347,79 +377,29 @@ export default function AgentsCreate() {
                                         Agen akan login menggunakan nomor telepon dan password ini
                                     </p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                                                Password <span className="text-red-500">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showPassword ? 'text' : 'password'}
-                                                    name="password"
-                                                    value={formData.password}
-                                                    onChange={handleChange}
-                                                    placeholder="Minimal 6 karakter"
-                                                    className={`w-full px-4 py-2.5 pr-10 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2
-                                                        ${errors.password
-                                                            ? 'border-red-500 focus:ring-red-500/50'
-                                                            : isDark 
-                                                                ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 placeholder:text-emerald-500/40 focus:ring-emerald-500/50' 
-                                                                : 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-teal-500'
-                                                        }
-                                                    `}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'}`}
-                                                >
-                                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                            {errors.password && <p className="mt-1.5 text-sm text-red-500">{errors.password}</p>}
-                                        </div>
-                                        <div>
-                                            <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                                                Konfirmasi Password <span className="text-red-500">*</span>
-                                            </label>
-                                            <div className="relative">
-                                                <input
-                                                    type={showConfirmPassword ? 'text' : 'password'}
-                                                    name="confirmPassword"
-                                                    value={formData.confirmPassword}
-                                                    onChange={handleChange}
-                                                    placeholder="Ulangi password"
-                                                    className={`w-full px-4 py-2.5 pr-10 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2
-                                                        ${errors.confirmPassword
-                                                            ? 'border-red-500 focus:ring-red-500/50'
-                                                            : isDark 
-                                                                ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 placeholder:text-emerald-500/40 focus:ring-emerald-500/50' 
-                                                                : 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400 focus:ring-teal-500'
-                                                        }
-                                                    `}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'}`}
-                                                >
-                                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                            </div>
-                                            {errors.confirmPassword && <p className="mt-1.5 text-sm text-red-500">{errors.confirmPassword}</p>}
-                                        </div>
+                                        <FormInput
+                                            label="Password"
+                                            name="password"
+                                            type="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            error={errors.password}
+                                            placeholder="Minimal 6 karakter"
+                                            required
+                                        />
+                                        <FormInput
+                                            label="Konfirmasi Password"
+                                            name="confirmPassword"
+                                            type="password"
+                                            value={formData.confirmPassword}
+                                            onChange={handleChange}
+                                            error={errors.confirmPassword}
+                                            placeholder="Ulangi password"
+                                            required
+                                        />
                                     </div>
                                 </div>
 
-                                <FormTextarea
-                                    label="Alamat"
-                                    name="address"
-                                    value={formData.address}
-                                    onChange={handleChange}
-                                    error={errors.address}
-                                    placeholder="Alamat lengkap agen"
-                                    required
-                                    className="md:col-span-2"
-                                />
                             </div>
                         </div>
 

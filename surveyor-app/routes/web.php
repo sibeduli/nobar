@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgentController;
 use App\Http\Controllers\Auth\PicAuthController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\RegionController;
@@ -38,13 +39,13 @@ Route::middleware('auth:pic')->group(function () {
     Route::get('/company-profile', [CompanyProfileController::class, 'show'])->name('pic.company-profile');
     Route::put('/company-profile', [CompanyProfileController::class, 'update'])->name('pic.company-profile.update');
 
-    Route::get('/agents', function () {
-        return Inertia::render('Agents/Index');
-    });
-
-    Route::get('/agents/create', function () {
-        return Inertia::render('Agents/Create');
-    });
+    Route::get('/agents', [AgentController::class, 'index'])->name('pic.agents.index');
+    Route::get('/agents/create', [AgentController::class, 'create'])->name('pic.agents.create');
+    Route::post('/agents', [AgentController::class, 'store'])->name('pic.agents.store');
+    Route::get('/agents/{agent}', [AgentController::class, 'show'])->name('pic.agents.show');
+    Route::get('/agents/{agent}/edit', [AgentController::class, 'edit'])->name('pic.agents.edit');
+    Route::put('/agents/{agent}', [AgentController::class, 'update'])->name('pic.agents.update');
+    Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('pic.agents.destroy');
 
     Route::get('/agents/activities', function () {
         return Inertia::render('Agents/Activities');
