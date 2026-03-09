@@ -144,15 +144,15 @@ export default function DashboardLayout({ children }) {
     const [expandedMenus, setExpandedMenus] = useState(['Agen Survey']);
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
-    const { url } = usePage();
+    const { url, props } = usePage();
 
-    // Mock user data
+    // Get user from shared auth data
+    const authUser = props.auth?.user;
     const user = {
-        name: 'Abdullah Said',
-        email: 'abdullah@example.com',
+        name: authUser?.name || 'User',
+        email: authUser?.email || '',
         role: 'PIC',
-        company: 'PT Mitra Nobar',
-        avatar: null,
+        company: authUser?.company?.name || '',
     };
 
     const isDark = theme === 'dark';
@@ -236,7 +236,7 @@ export default function DashboardLayout({ children }) {
                                 <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className={`font-medium text-sm truncate ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Abdullah Said</div>
+                                <div className={`font-medium text-sm truncate ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{user.name}</div>
                                 <div className={`text-xs ${isDark ? 'text-emerald-500/80' : 'text-gray-500'}`}>Login terakhir: Hari ini</div>
                             </div>
                         </div>
@@ -318,7 +318,7 @@ export default function DashboardLayout({ children }) {
                     </div>
                     {/* Desktop: Welcome text */}
                     <div className="hidden lg:block">
-                        <h1 className={`text-xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Selamat datang, Abdullah!</h1>
+                        <h1 className={`text-xl font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Selamat datang, {user.name.split(' ')[0]}!</h1>
                         <p className={`text-sm ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Kelola venue dan agen Anda di sini.</p>
                     </div>
                     <div className="flex items-center gap-3">
