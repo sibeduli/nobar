@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\PicAuthController;
 use App\Http\Controllers\CompanyProfileController;
 use App\Http\Controllers\RegionController;
+use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -65,9 +66,9 @@ Route::middleware('auth:pic')->group(function () {
         return Inertia::render('PIC/Activities');
     });
 
-    Route::get('/settings', function () {
-        return Inertia::render('Settings/Index');
-    });
+    Route::get('/settings', [SettingsController::class, 'index'])->name('pic.settings');
+    Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('pic.settings.profile');
+    Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('pic.settings.password');
 });
 
 // ==================== Agent Auth Routes (Guest) ====================

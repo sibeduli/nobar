@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
+import Modal, { ConfirmModal } from '@/Components/Modal';
+import FormInput from '@/Components/FormInput';
 import Button from '@/Components/Button';
 import {
     User,
     Lock,
     Smartphone,
     Monitor,
-    Globe,
     LogOut,
     Save,
-    Eye,
-    EyeOff,
+    X,
+    Edit3,
     Mail,
     Phone,
     MapPin,
@@ -24,34 +26,28 @@ import {
     QrCode,
 } from 'lucide-react';
 
-// Mock current user data
-const mockUser = {
-    name: 'Admin TVRI',
-    email: 'admin@tvri.co.id',
-    phone: '08123456789',
-    position: 'PIC Surveyor',
-    authProvider: 'google', // 'google' or 'email'
-    avatar: null,
-    createdAt: '2024-01-15',
-    twoFactorEnabled: false,
-};
-
-// Mock active sessions
+// Mock active sessions (will be implemented later)
 const mockSessions = [
     { id: 1, device: 'Chrome on Windows', ip: '192.168.1.100', location: 'Jakarta, Indonesia', lastActive: '2024-03-10T15:30:00', current: true },
-    { id: 2, device: 'Safari on iPhone', ip: '192.168.1.105', location: 'Jakarta, Indonesia', lastActive: '2024-03-10T10:00:00', current: false },
-    { id: 3, device: 'Firefox on MacOS', ip: '103.28.12.45', location: 'Bandung, Indonesia', lastActive: '2024-03-08T14:20:00', current: false },
 ];
 
-export default function SettingsIndex() {
+export default function SettingsIndex({ user }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
+    const { flash } = usePage().props;
 
     // Get tab from URL
     const urlParams = new URLSearchParams(window.location.search);
     const tabFromUrl = urlParams.get('tab');
     const [activeTab, setActiveTab] = useState(tabFromUrl || 'profile');
+
+    // Edit mode states
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [isEditingPassword, setIsEditingPassword] = useState(false);
+    const [showSaveModal, setShowSaveModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     const handleTabChange = (tab) => {
         setActiveTab(tab);
@@ -59,46 +55,85 @@ export default function SettingsIndex() {
         url.searchParams.set('tab', tab);
         window.history.pushState({}, '', url);
     };
-    const [user, setUser] = useState(mockUser);
+
     const [sessions, setSessions] = useState(mockSessions);
-    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [passwords, setPasswords] = useState({
-        current: '',
-        new: '',
-        confirm: '',
+
+    const initialProfileData = {
+        name: user?.name || '',
+        phone: user?.phone || '',
+    };
+
+    // Profile form
+    const { data: profileData, setData: setProfileData, put: putProfile, processing: processingProfile, errors: profileErrors, reset: resetProfile } = useForm(initialProfileData);
+
+    // Password form
+    const { data: passwordData, setData: setPasswordData, put: putPassword, processing: processingPassword, errors: passwordErrors, reset: resetPassword } = useForm({
+        current_password: '',
+        password: '',
+        password_confirmation: '',
     });
-    const [profileForm, setProfileForm] = useState({
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        position: user.position,
-    });
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+            setIsEditingProfile(false);
+            setIsEditingPassword(false);
+            setShowSaveModal(false);
+            setShowPasswordModal(false);
+        }
+    }, [flash?.success]);
 
     const handleProfileChange = (e) => {
-        setProfileForm({ ...profileForm, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setProfileData(name, value);
     };
 
-    const handlePasswordChange = (e) => {
-        setPasswords({ ...passwords, [e.target.name]: e.target.value });
+    const handleSaveProfile = () => {
+        setShowSaveModal(true);
     };
 
-    const saveProfile = () => {
-        toast.success('Profil berhasil disimpan');
+    const confirmSaveProfile = () => {
+        putProfile('/settings/profile', {
+            onSuccess: () => {
+                setShowSaveModal(false);
+                setIsEditingProfile(false);
+            },
+            onError: () => {
+                setShowSaveModal(false);
+            },
+        });
     };
 
-    const changePassword = () => {
-        if (passwords.new !== passwords.confirm) {
-            toast.error('Password baru tidak cocok');
-            return;
+    const handleCancelProfile = () => {
+        if (JSON.stringify(profileData) !== JSON.stringify(initialProfileData)) {
+            setShowCancelModal(true);
+        } else {
+            setIsEditingProfile(false);
         }
-        if (passwords.new.length < 8) {
-            toast.error('Password minimal 8 karakter');
-            return;
-        }
-        toast.success('Password berhasil diubah');
-        setPasswords({ current: '', new: '', confirm: '' });
+    };
+
+    const confirmCancelProfile = () => {
+        resetProfile();
+        setIsEditingProfile(false);
+        setShowCancelModal(false);
+        toast.info('Perubahan dibatalkan');
+    };
+
+    const handleSavePassword = () => {
+        setShowPasswordModal(true);
+    };
+
+    const confirmSavePassword = () => {
+        putPassword('/settings/password', {
+            onSuccess: () => {
+                resetPassword();
+                setShowPasswordModal(false);
+                setIsEditingPassword(false);
+            },
+            onError: () => {
+                setShowPasswordModal(false);
+            },
+        });
     };
 
     const revokeSession = (sessionId) => {
@@ -117,62 +152,16 @@ export default function SettingsIndex() {
         { id: 'sessions', label: 'Sesi Aktif', icon: Smartphone },
     ];
 
-    const FormInput = ({ label, name, type = 'text', value, onChange, placeholder, disabled, icon: Icon }) => (
-        <div>
-            <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                {label}
-            </label>
-            <div className="relative">
-                {Icon && (
-                    <Icon className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                )}
-                <input
-                    type={type}
-                    name={name}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors
-                        ${Icon ? 'pl-10' : ''}
-                        ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
-                        ${isDark 
-                            ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-50 placeholder-emerald-500/40 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20'
-                        }
-                    `}
-                />
+    const InfoRow = ({ icon: Icon, label, value }) => (
+        <div className="flex items-start gap-3 py-3">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}
+            `}>
+                <Icon className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
             </div>
-        </div>
-    );
-
-    const PasswordInput = ({ label, name, value, onChange, placeholder, show, onToggle }) => (
-        <div>
-            <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                {label}
-            </label>
-            <div className="relative">
-                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                <input
-                    type={show ? 'text' : 'password'}
-                    name={name}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    className={`w-full rounded-lg border pl-10 pr-10 py-2 text-sm transition-colors
-                        ${isDark 
-                            ? 'bg-emerald-950/30 border-emerald-900/50 text-emerald-50 placeholder-emerald-500/40 focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20'
-                        }
-                    `}
-                />
-                <button
-                    type="button"
-                    onClick={onToggle}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-400 hover:text-gray-600'}`}
-                >
-                    {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            <div className="flex-1 min-w-0">
+                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{label}</p>
+                <p className={`text-sm mt-0.5 ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value || '-'}</p>
             </div>
         </div>
     );
@@ -216,67 +205,66 @@ export default function SettingsIndex() {
 
                 {/* Profile Tab */}
                 {activeTab === 'profile' && (
-                    <div className={`rounded-xl p-6 ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                            Informasi Profil
-                        </h2>
-
-                        {user.authProvider === 'google' && (
-                            <div className={`flex items-center gap-3 p-3 rounded-lg mb-6 ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                                <Globe className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                                <div>
-                                    <p className={`text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-                                        Masuk dengan Google
-                                    </p>
-                                    <p className={`text-xs ${isDark ? 'text-blue-400/70' : 'text-blue-600'}`}>
-                                        Email tidak dapat diubah. Lengkapi profil Anda di bawah.
-                                    </p>
+                    <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                        {/* Header with Edit Button */}
+                        <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-100'}`}>
+                            <h2 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                                Informasi Profil
+                            </h2>
+                            {!isEditingProfile ? (
+                                <Button variant="secondary" size="sm" onClick={() => setIsEditingProfile(true)}>
+                                    <Edit3 className="w-4 h-4" />
+                                    Edit
+                                </Button>
+                            ) : (
+                                <div className="flex gap-2">
+                                    <Button variant="ghost" size="sm" onClick={handleCancelProfile}>
+                                        <X className="w-4 h-4" />
+                                        Batal
+                                    </Button>
+                                    <Button variant="primary" size="sm" onClick={handleSaveProfile} loading={processingProfile}>
+                                        <Save className="w-4 h-4" />
+                                        Simpan
+                                    </Button>
                                 </div>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="Nama Lengkap"
-                                name="name"
-                                value={profileForm.name}
-                                onChange={handleProfileChange}
-                                placeholder="Masukkan nama lengkap"
-                                icon={User}
-                            />
-                            <FormInput
-                                label="Email"
-                                name="email"
-                                type="email"
-                                value={profileForm.email}
-                                onChange={handleProfileChange}
-                                placeholder="Masukkan email"
-                                disabled={user.authProvider === 'google'}
-                                icon={Mail}
-                            />
-                            <FormInput
-                                label="Nomor Telepon"
-                                name="phone"
-                                value={profileForm.phone}
-                                onChange={handleProfileChange}
-                                placeholder="Masukkan nomor telepon"
-                                icon={Phone}
-                            />
-                            <FormInput
-                                label="Jabatan"
-                                name="position"
-                                value={profileForm.position}
-                                onChange={handleProfileChange}
-                                placeholder="Masukkan jabatan"
-                                icon={User}
-                            />
+                            )}
                         </div>
 
-                        <div className="flex justify-end mt-6">
-                            <Button variant="primary" onClick={saveProfile}>
-                                <Save className="w-4 h-4" />
-                                Simpan Profil
-                            </Button>
+                        <div className="p-6">
+                            {!isEditingProfile ? (
+                                /* View Mode */
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                                    <InfoRow icon={User} label="Nama Lengkap" value={profileData.name} />
+                                    <InfoRow icon={Mail} label="Email" value={user?.email} />
+                                    <InfoRow icon={Phone} label="Nomor Telepon" value={profileData.phone} />
+                                </div>
+                            ) : (
+                                /* Edit Mode */
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormInput
+                                        label="Nama Lengkap"
+                                        name="name"
+                                        value={profileData.name}
+                                        onChange={handleProfileChange}
+                                        error={profileErrors.name}
+                                        required
+                                    />
+                                    <FormInput
+                                        label="Email"
+                                        name="email"
+                                        type="email"
+                                        value={user?.email || ''}
+                                        disabled
+                                    />
+                                    <FormInput
+                                        label="Nomor Telepon"
+                                        name="phone"
+                                        value={profileData.phone}
+                                        onChange={handleProfileChange}
+                                        error={profileErrors.phone}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -284,78 +272,88 @@ export default function SettingsIndex() {
                 {/* Security Tab */}
                 {activeTab === 'security' && (
                     <div className="space-y-6">
-                        {/* Password Change - Only for non-Google users */}
-                        {user.authProvider !== 'google' ? (
-                            <div className={`rounded-xl p-6 ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                                <h2 className={`text-lg font-semibold mb-4 ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                                    Ubah Password
-                                </h2>
-
-                                <div className="space-y-4 max-w-md">
-                                    <PasswordInput
-                                        label="Password Saat Ini"
-                                        name="current"
-                                        value={passwords.current}
-                                        onChange={handlePasswordChange}
-                                        placeholder="Masukkan password saat ini"
-                                        show={showCurrentPassword}
-                                        onToggle={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    />
-                                    <PasswordInput
-                                        label="Password Baru"
-                                        name="new"
-                                        value={passwords.new}
-                                        onChange={handlePasswordChange}
-                                        placeholder="Masukkan password baru"
-                                        show={showNewPassword}
-                                        onToggle={() => setShowNewPassword(!showNewPassword)}
-                                    />
-                                    <PasswordInput
-                                        label="Konfirmasi Password Baru"
-                                        name="confirm"
-                                        value={passwords.confirm}
-                                        onChange={handlePasswordChange}
-                                        placeholder="Konfirmasi password baru"
-                                        show={showConfirmPassword}
-                                        onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    />
-
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                        Password minimal 8 karakter dengan kombinasi huruf dan angka
+                        {/* Password Change */}
+                        <div className={`rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                            {/* Header */}
+                            <div className={`flex items-center justify-between p-4 border-b ${isDark ? 'border-emerald-900/30' : 'border-gray-100'}`}>
+                                <div>
+                                    <h2 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                                        Password
+                                    </h2>
+                                    <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                                        Kelola password akun Anda
                                     </p>
-
-                                    <Button variant="primary" onClick={changePassword}>
-                                        <Lock className="w-4 h-4" />
+                                </div>
+                                {!isEditingPassword ? (
+                                    <Button variant="secondary" size="sm" onClick={() => setIsEditingPassword(true)}>
+                                        <Edit3 className="w-4 h-4" />
                                         Ubah Password
                                     </Button>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className={`rounded-xl p-6 ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                                        <Shield className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                                ) : (
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="sm" onClick={() => { resetPassword(); setIsEditingPassword(false); }}>
+                                            <X className="w-4 h-4" />
+                                            Batal
+                                        </Button>
+                                        <Button variant="primary" size="sm" onClick={handleSavePassword} loading={processingPassword}>
+                                            <Save className="w-4 h-4" />
+                                            Simpan
+                                        </Button>
                                     </div>
-                                    <div>
-                                        <h2 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                                            Keamanan Akun Google
-                                        </h2>
-                                        <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                            Akun Anda diamankan oleh Google. Kelola keamanan melalui pengaturan akun Google Anda.
+                                )}
+                            </div>
+
+                            <div className="p-6">
+                                {!isEditingPassword ? (
+                                    /* View Mode */
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
+                                            <Lock className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Password</p>
+                                            <p className={`text-sm ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>••••••••</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Edit Mode */
+                                    <div className="space-y-4 max-w-md">
+                                        <FormInput
+                                            label="Password Saat Ini"
+                                            name="current_password"
+                                            type="password"
+                                            value={passwordData.current_password}
+                                            onChange={(e) => setPasswordData('current_password', e.target.value)}
+                                            placeholder="Masukkan password saat ini"
+                                            error={passwordErrors.current_password}
+                                            required
+                                        />
+                                        <FormInput
+                                            label="Password Baru"
+                                            name="password"
+                                            type="password"
+                                            value={passwordData.password}
+                                            onChange={(e) => setPasswordData('password', e.target.value)}
+                                            placeholder="Masukkan password baru"
+                                            error={passwordErrors.password}
+                                            required
+                                        />
+                                        <FormInput
+                                            label="Konfirmasi Password Baru"
+                                            name="password_confirmation"
+                                            type="password"
+                                            value={passwordData.password_confirmation}
+                                            onChange={(e) => setPasswordData('password_confirmation', e.target.value)}
+                                            placeholder="Konfirmasi password baru"
+                                            required
+                                        />
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                                            Password minimal 8 karakter
                                         </p>
                                     </div>
-                                </div>
-                                <a
-                                    href="https://myaccount.google.com/security"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`inline-flex items-center gap-2 mt-4 text-sm font-medium ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
-                                >
-                                    <Globe className="w-4 h-4" />
-                                    Buka Pengaturan Keamanan Google
-                                </a>
+                                )}
                             </div>
-                        )}
+                        </div>
 
                         {/* Two-Factor Authentication */}
                         <div className={`rounded-xl p-6 ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
@@ -513,6 +511,41 @@ export default function SettingsIndex() {
                     </div>
                 )}
             </div>
+
+            {/* Save Profile Modal */}
+            <ConfirmModal
+                isOpen={showSaveModal}
+                onClose={() => setShowSaveModal(false)}
+                onConfirm={confirmSaveProfile}
+                title="Simpan Perubahan"
+                message="Apakah Anda yakin ingin menyimpan perubahan profil?"
+                confirmText="Simpan"
+                confirmVariant="primary"
+                loading={processingProfile}
+            />
+
+            {/* Cancel Profile Modal */}
+            <ConfirmModal
+                isOpen={showCancelModal}
+                onClose={() => setShowCancelModal(false)}
+                onConfirm={confirmCancelProfile}
+                title="Batalkan Perubahan"
+                message="Perubahan yang belum disimpan akan hilang. Lanjutkan?"
+                confirmText="Ya, Batalkan"
+                confirmVariant="danger"
+            />
+
+            {/* Save Password Modal */}
+            <ConfirmModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                onConfirm={confirmSavePassword}
+                title="Ubah Password"
+                message="Apakah Anda yakin ingin mengubah password?"
+                confirmText="Ubah Password"
+                confirmVariant="primary"
+                loading={processingPassword}
+            />
         </DashboardLayout>
     );
 }
