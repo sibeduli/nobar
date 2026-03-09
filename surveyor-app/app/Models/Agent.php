@@ -20,6 +20,7 @@ class Agent extends Authenticatable
         'areas',
         'qr_code',
         'status',
+        'notes',
         'last_login_at',
     ];
 

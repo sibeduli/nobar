@@ -120,7 +120,17 @@ class AgentController extends Controller
         $this->authorizeAgent($agent);
 
         return Inertia::render('Agents/Edit', [
-            'agent' => $agent,
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'email' => $agent->email,
+                'phone' => $agent->phone,
+                'nik' => $agent->nik,
+                'address' => $agent->address,
+                'areas' => $agent->areas ?? [],
+                'status' => $agent->status,
+                'notes' => $agent->notes,
+            ],
         ]);
     }
 
@@ -136,6 +146,7 @@ class AgentController extends Controller
             'address' => 'nullable|string|max:500',
             'areas' => 'required|array|min:1',
             'status' => 'required|in:active,inactive',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         $agent->update($validated);
