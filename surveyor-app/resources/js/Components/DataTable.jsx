@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { 
     Search, 
@@ -10,7 +10,8 @@ import {
     Filter,
     Columns,
     Check,
-    MoreVertical
+    MoreVertical,
+    ChevronsRight
 } from 'lucide-react';
 
 export default function DataTable({
@@ -42,6 +43,78 @@ export default function DataTable({
     const [showFilters, setShowFilters] = useState(false);
     const [activeFilters, setActiveFilters] = useState({});
     const [showBulkMenu, setShowBulkMenu] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+    const [scrollLeft, setScrollLeft] = useState(0);
+    const tableContainerRef = useRef(null);
+
+    // Check if table can scroll horizontally
+    useEffect(() => {
+        const checkScroll = () => {
+            const container = tableContainerRef.current;
+            if (container) {
+                const hasMoreToScroll = container.scrollWidth > container.clientWidth && 
+                    container.scrollLeft < (container.scrollWidth - container.clientWidth - 10);
+                setCanScrollRight(hasMoreToScroll);
+            }
+        };
+
+        checkScroll();
+        const container = tableContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', checkScroll);
+            window.addEventListener('resize', checkScroll);
+        }
+
+        return () => {
+            if (container) {
+                container.removeEventListener('scroll', checkScroll);
+            }
+            window.removeEventListener('resize', checkScroll);
+        };
+    }, [data, visibleColumns]);
+
+    // Drag to scroll handlers
+    const handleMouseDown = (e) => {
+        const container = tableContainerRef.current;
+        if (!container) return;
+        
+        // Don't start drag if clicking on interactive elements
+        if (e.target.closest('button, input, a, select')) return;
+        
+        setIsDragging(true);
+        setStartX(e.pageX - container.offsetLeft);
+        setScrollLeft(container.scrollLeft);
+        container.style.cursor = 'grabbing';
+        container.style.userSelect = 'none';
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const container = tableContainerRef.current;
+        if (!container) return;
+        
+        const x = e.pageX - container.offsetLeft;
+        const walk = (x - startX) * 1.5; // Scroll speed multiplier
+        container.scrollLeft = scrollLeft - walk;
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+        const container = tableContainerRef.current;
+        if (container) {
+            container.style.cursor = 'grab';
+            container.style.userSelect = '';
+        }
+    };
+
+    const handleMouseLeave = () => {
+        if (isDragging) {
+            handleMouseUp();
+        }
+    };
 
     // Filter and search data
     const filteredData = useMemo(() => {
@@ -410,10 +483,30 @@ export default function DataTable({
             )}
 
             {/* Table */}
-            <div className={`rounded-xl overflow-hidden
+            <div className={`rounded-xl overflow-hidden relative
                 ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}
             `}>
-                <div className="overflow-x-auto">
+                {/* Scroll indicator */}
+                {canScrollRight && (
+                    <div className={`absolute right-0 top-0 bottom-0 w-12 pointer-events-none z-10 flex items-center justify-center
+                        ${isDark 
+                            ? 'bg-gradient-to-l from-[#0d1414] via-[#0d1414]/80 to-transparent' 
+                            : 'bg-gradient-to-l from-white via-white/80 to-transparent'
+                        }
+                    `}>
+                        <div className={`animate-pulse ${isDark ? 'text-emerald-500' : 'text-teal-500'}`}>
+                            <ChevronsRight className="w-5 h-5" />
+                        </div>
+                    </div>
+                )}
+                <div 
+                    ref={tableContainerRef} 
+                    className="overflow-x-auto cursor-grab active:cursor-grabbing"
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseLeave}
+                >
                     <table className="w-full">
                         <thead>
                             <tr className={isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}>
