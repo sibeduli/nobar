@@ -41,6 +41,12 @@ Route::middleware('auth:pic')->group(function () {
 
     Route::get('/agents', [AgentController::class, 'index'])->name('pic.agents.index');
     Route::get('/agents/create', [AgentController::class, 'create'])->name('pic.agents.create');
+    Route::get('/agents/activities', function () {
+        return Inertia::render('Agents/Activities');
+    });
+    Route::get('/agents/export', [AgentController::class, 'export'])->name('pic.agents.export');
+    Route::post('/agents/bulk-status', [AgentController::class, 'bulkUpdateStatus'])->name('pic.agents.bulk-status');
+    Route::post('/agents/bulk-delete', [AgentController::class, 'bulkDelete'])->name('pic.agents.bulk-delete');
     Route::post('/agents', [AgentController::class, 'store'])->name('pic.agents.store');
     Route::get('/agents/{agent}', [AgentController::class, 'show'])->name('pic.agents.show');
     Route::get('/agents/{agent}/edit', [AgentController::class, 'edit'])->name('pic.agents.edit');
@@ -48,10 +54,6 @@ Route::middleware('auth:pic')->group(function () {
     Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('pic.agents.destroy');
     Route::put('/agents/{agent}/reset-password', [AgentController::class, 'resetPassword'])->name('pic.agents.reset-password');
     Route::post('/agents/{agent}/force-logout', [AgentController::class, 'forceLogout'])->name('pic.agents.force-logout');
-
-    Route::get('/agents/activities', function () {
-        return Inertia::render('Agents/Activities');
-    });
 
     Route::get('/help', function () {
         return Inertia::render('Help');
@@ -78,9 +80,8 @@ Route::middleware('auth:pic')->group(function () {
 
 // ==================== Agent Auth Routes (Guest) ====================
 Route::middleware('guest:agent')->group(function () {
-    Route::get('/agent/login', function () {
-        return Inertia::render('Agent/Login');
-    })->name('agent.login');
+    Route::get('/agent/login', [App\Http\Controllers\Auth\AgentAuthController::class, 'showLogin'])->name('agent.login');
+    Route::post('/agent/login', [App\Http\Controllers\Auth\AgentAuthController::class, 'login']);
 });
 
 // ==================== Agent Protected Routes ====================

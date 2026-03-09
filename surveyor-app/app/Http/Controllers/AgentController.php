@@ -24,8 +24,12 @@ class AgentController extends Controller
                     'name' => $agent->name,
                     'email' => $agent->email,
                     'phone' => $agent->phone,
+                    'nik' => $agent->nik,
+                    'address' => $agent->address,
                     'areas' => $agent->areas ?? [],
                     'status' => $agent->status,
+                    'ktp_photo' => $agent->ktp_photo ? '/storage/' . $agent->ktp_photo : null,
+                    'notes' => $agent->notes,
                     'surveys' => $agent->surveys_count,
                     'joinDate' => $agent->created_at?->format('Y-m-d'),
                 ];
@@ -97,10 +101,12 @@ class AgentController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'nik' => $validated['nik'],
+            'ktp_photo' => $ktpPath,
             'address' => $validated['address'],
             'areas' => $validated['areas'],
             'qr_code' => $qrCode,
             'status' => $validated['status'],
+            'notes' => $validated['notes'] ?? null,
         ]);
 
         return redirect()->route('pic.agents.index')->with('success', 'Agen berhasil didaftarkan');
@@ -181,16 +187,22 @@ class AgentController extends Controller
         return back()->with('success', 'Password agen berhasil direset');
     }
 
-    public function forceLogout(Agent $agent)
+    public function forceLogout(Request $request, Agent $agent)
     {
         $this->authorizeAgent($agent);
 
-        // Delete all sessions for this agent
-        \DB::table('sessions')
-            ->where('user_id', $agent->id)
+        $currentSessionId = $request->session()->getId();
+
+        // Delete all sessions for this agent EXCEPT the current session (to avoid logging out PIC in same browser)
+        $deleted = \DB::table('sessions')
+            ->where('agent_id', $agent->id)
+            ->whereNotNull('agent_id')
+            ->where('id', '!=', $currentSessionId)
             ->delete();
 
-        return back()->with('success', 'Semua sesi agen berhasil dilogout');
+        return back()->with('success', $deleted > 0 
+            ? "Berhasil logout {$deleted} sesi agen" 
+            : "Tidak ada sesi agen lain yang aktif");
     }
 
     private function authorizeAgent(Agent $agent): void
@@ -200,5 +212,77 @@ class AgentController extends Controller
         if ($agent->company_id !== $pic->company_id) {
             abort(403, 'Unauthorized');
         }
+    }
+
+    public function bulkUpdateStatus(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:agents,id',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $pic = Auth::guard('pic')->user();
+        
+        $updated = Agent::where('company_id', $pic->company_id)
+            ->whereIn('id', $validated['ids'])
+            ->update(['status' => $validated['status']]);
+
+        $statusLabel = $validated['status'] === 'active' ? 'diaktifkan' : 'dinonaktifkan';
+        
+        return back()->with('success', "{$updated} agen berhasil {$statusLabel}");
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:agents,id',
+        ]);
+
+        $pic = Auth::guard('pic')->user();
+        
+        $deleted = Agent::where('company_id', $pic->company_id)
+            ->whereIn('id', $validated['ids'])
+            ->delete();
+
+        return back()->with('success', "{$deleted} agen berhasil dihapus");
+    }
+
+    public function export(Request $request)
+    {
+        $pic = Auth::guard('pic')->user();
+        
+        $ids = $request->input('ids', []);
+        
+        $query = Agent::where('company_id', $pic->company_id)
+            ->withCount('surveys');
+            
+        if (!empty($ids)) {
+            $query->whereIn('id', $ids);
+        }
+        
+        $agents = $query->get();
+
+        $csv = "Nama,Email,Telepon,NIK,Status,Area Tugas,Total Survei,Dibuat\n";
+        
+        foreach ($agents as $agent) {
+            $areas = is_array($agent->areas) ? implode('; ', $agent->areas) : '';
+            $csv .= sprintf(
+                "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%d,\"%s\"\n",
+                $agent->name,
+                $agent->email ?? '',
+                $agent->phone,
+                $agent->nik ?? '',
+                $agent->status === 'active' ? 'Aktif' : 'Nonaktif',
+                $areas,
+                $agent->surveys_count ?? 0,
+                $agent->created_at->format('Y-m-d H:i')
+            );
+        }
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="agents-export-' . date('Y-m-d') . '.csv"');
     }
 }

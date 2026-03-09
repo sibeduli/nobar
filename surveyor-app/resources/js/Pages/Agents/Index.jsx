@@ -28,7 +28,9 @@ import {
     EyeOff,
     Copy,
     QrCode,
-    Link2
+    Link2,
+    CreditCard,
+    Home
 } from 'lucide-react';
 
 const statusConfig = {
@@ -52,7 +54,7 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
         }
     }, [flash]);
 
-    const [agents] = useState(initialAgents);
+    const agents = initialAgents;
     const [selectedAgent, setSelectedAgent] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -115,6 +117,7 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
 
     const confirmDelete = () => {
         router.delete(`/agents/${selectedAgent.id}`, {
+            preserveScroll: true,
             onSuccess: () => {
                 setShowDeleteModal(false);
                 setSelectedAgent(null);
@@ -131,11 +134,19 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
     };
 
     const handleBulkActivate = (selected) => {
-        toast.success(`${selected.length} agen berhasil diaktifkan`);
+        const ids = selected.map(agent => agent.id);
+        router.post('/agents/bulk-status', { ids, status: 'active' }, {
+            preserveScroll: true,
+            onError: () => toast.error('Gagal mengaktifkan agen'),
+        });
     };
 
     const handleBulkDeactivate = (selected) => {
-        toast.success(`${selected.length} agen berhasil dinonaktifkan`);
+        const ids = selected.map(agent => agent.id);
+        router.post('/agents/bulk-status', { ids, status: 'inactive' }, {
+            preserveScroll: true,
+            onError: () => toast.error('Gagal menonaktifkan agen'),
+        });
     };
 
     const handleBulkDelete = (selected) => {
@@ -144,12 +155,23 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
     };
 
     const confirmBulkDelete = () => {
-        toast.success(`${selectedAgents.length} agen berhasil dihapus`);
-        setSelectedAgents([]);
+        const ids = selectedAgents.map(agent => agent.id);
+        router.post('/agents/bulk-delete', { ids }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowBulkDeleteModal(false);
+                setSelectedAgents([]);
+            },
+            onError: () => toast.error('Gagal menghapus agen'),
+        });
     };
 
     const handleExport = (selected) => {
-        toast.info(`Mengekspor ${selected.length} data agen...`);
+        const ids = selected.map(agent => agent.id);
+        const params = new URLSearchParams();
+        ids.forEach(id => params.append('ids[]', id));
+        window.location.href = `/agents/export?${params.toString()}`;
+        toast.success('Mengunduh data agen...');
     };
 
     const handleResetPassword = (agent) => {
@@ -301,7 +323,7 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                         className={`p-1.5 rounded-lg transition-colors
                             ${isDark ? 'text-blue-500/60 hover:text-blue-400 hover:bg-blue-500/10' : 'text-blue-500 hover:text-blue-600 hover:bg-blue-50'}
                         `}
-                        title="Force Logout"
+                        title="Paksa Logout Agen"
                     >
                         <LogOut className="w-4 h-4" />
                     </button>
@@ -485,7 +507,7 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                 isOpen={showDetailModal}
                 onClose={() => setShowDetailModal(false)}
                 title="Detail Agen"
-                size="md"
+                size="lg"
             >
                 {selectedAgent && (
                     <div className="space-y-4">
@@ -506,12 +528,22 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                         <div className={`space-y-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div className="flex items-center gap-3">
                                 <Mail className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.email}</span>
+                                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.email || '-'}</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Phone className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
                                 <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.phone}</span>
                             </div>
+                            <div className="flex items-center gap-3">
+                                <CreditCard className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>NIK: {selectedAgent.nik || '-'}</span>
+                            </div>
+                            {selectedAgent.address && (
+                                <div className="flex items-start gap-3">
+                                    <Home className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.address}</span>
+                                </div>
+                            )}
                             <div className="flex items-start gap-3">
                                 <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
                                 <div className="flex flex-wrap gap-1">
@@ -531,6 +563,28 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                                 </div>
                             </div>
                         </div>
+
+                        {/* KTP Photo */}
+                        {selectedAgent.ktp_photo && (
+                            <div className={`pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                                <p className={`text-xs font-medium mb-2 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Foto KTP</p>
+                                <img 
+                                    src={selectedAgent.ktp_photo} 
+                                    alt="KTP" 
+                                    className="w-full max-w-sm rounded-lg border cursor-pointer hover:opacity-90 transition-opacity"
+                                    style={{ maxHeight: '200px', objectFit: 'contain' }}
+                                    onClick={() => window.open(selectedAgent.ktp_photo, '_blank')}
+                                />
+                            </div>
+                        )}
+
+                        {/* Notes */}
+                        {selectedAgent.notes && (
+                            <div className={`pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                                <p className={`text-xs font-medium mb-2 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Catatan</p>
+                                <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedAgent.notes}</p>
+                            </div>
+                        )}
 
                         <div className={`grid grid-cols-2 gap-4 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>

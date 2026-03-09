@@ -1,53 +1,21 @@
 import { useState } from 'react';
 import { useTheme } from '@/Contexts/ThemeContext';
-import { Link, router } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { Phone, Lock, Eye, EyeOff, Sun, Moon, LogIn } from 'lucide-react';
 
 export default function AgentLogin() {
     const { theme, toggleTheme } = useTheme();
     const isDark = theme === 'dark';
 
-    const [formData, setFormData] = useState({
+    const { data, setData, post, processing, errors } = useForm({
         phone: '',
         password: '',
     });
-    const [errors, setErrors] = useState({});
     const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: null }));
-        }
-    };
-
-    const validate = () => {
-        const newErrors = {};
-        if (!formData.phone.trim()) {
-            newErrors.phone = 'Nomor telepon wajib diisi';
-        } else if (!/^08\d{8,12}$/.test(formData.phone.replace(/\D/g, ''))) {
-            newErrors.phone = 'Format nomor telepon tidak valid';
-        }
-        if (!formData.password) {
-            newErrors.password = 'Password wajib diisi';
-        }
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        if (!validate()) return;
-
-        setIsLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsLoading(false);
-        
-        // Redirect to agent dashboard
-        router.visit('/agent');
+        post('/agent/login');
     };
 
     return (
@@ -95,8 +63,8 @@ export default function AgentLogin() {
                                 <input
                                     type="tel"
                                     name="phone"
-                                    value={formData.phone}
-                                    onChange={handleChange}
+                                    value={data.phone}
+                                    onChange={(e) => setData('phone', e.target.value)}
                                     placeholder="08xxxxxxxxxx"
                                     className={`w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-colors focus:outline-none focus:ring-2
                                         ${errors.phone
@@ -121,8 +89,8 @@ export default function AgentLogin() {
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
+                                    value={data.password}
+                                    onChange={(e) => setData('password', e.target.value)}
                                     placeholder="Masukkan password"
                                     className={`w-full pl-11 pr-11 py-3 rounded-xl text-sm transition-colors focus:outline-none focus:ring-2
                                         ${errors.password
@@ -147,16 +115,16 @@ export default function AgentLogin() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={processing}
                             className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-medium transition-all
-                                ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}
+                                ${processing ? 'opacity-70 cursor-not-allowed' : ''}
                                 ${isDark 
                                     ? 'bg-emerald-500 hover:bg-emerald-400 text-white' 
                                     : 'bg-teal-600 hover:bg-teal-500 text-white'
                                 }
                             `}
                         >
-                            {isLoading ? (
+                            {processing ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <>

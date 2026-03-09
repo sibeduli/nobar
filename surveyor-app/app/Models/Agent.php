@@ -16,6 +16,7 @@ class Agent extends Authenticatable
         'email',
         'password',
         'nik',
+        'ktp_photo',
         'address',
         'areas',
         'qr_code',

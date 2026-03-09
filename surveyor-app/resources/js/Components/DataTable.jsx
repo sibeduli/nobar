@@ -383,7 +383,7 @@ export default function DataTable({
                                 onChange={(e) => handleFilterChange(filter.key, e.target.value)}
                                 className={`px-3 py-1.5 text-sm rounded-lg transition-colors focus:outline-none focus:ring-2
                                     ${isDark 
-                                        ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 focus:ring-emerald-500/50' 
+                                        ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 focus:ring-emerald-500/50 [&>option]:bg-[#0d1414] [&>option]:text-emerald-100' 
                                         : 'bg-white border border-gray-300 text-gray-900 focus:ring-teal-500'
                                     }
                                 `}
@@ -519,7 +519,7 @@ export default function DataTable({
                                     onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                                     className={`px-2 py-1 text-sm rounded-lg transition-colors focus:outline-none
                                         ${isDark 
-                                            ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100' 
+                                            ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100 [&>option]:bg-[#0d1414] [&>option]:text-emerald-100' 
                                             : 'bg-white border border-gray-300 text-gray-900'
                                         }
                                     `}
