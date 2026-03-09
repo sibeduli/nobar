@@ -15,11 +15,32 @@ class AgentController extends Controller
     {
         $pic = Auth::guard('pic')->user();
         $agents = Agent::where('company_id', $pic->company_id)
+            ->withCount('surveys')
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->map(function ($agent) {
+                return [
+                    'id' => $agent->id,
+                    'name' => $agent->name,
+                    'email' => $agent->email,
+                    'phone' => $agent->phone,
+                    'areas' => $agent->areas ?? [],
+                    'status' => $agent->status,
+                    'surveys' => $agent->surveys_count,
+                    'joinDate' => $agent->created_at?->format('Y-m-d'),
+                ];
+            });
+
+        $stats = [
+            'total' => $agents->count(),
+            'active' => $agents->where('status', 'active')->count(),
+            'inactive' => $agents->where('status', 'inactive')->count(),
+            'totalSurveys' => $agents->sum('surveys'),
+        ];
 
         return Inertia::render('Agents/Index', [
-            'agents' => $agents,
+            'agents' => $agents->values(),
+            'stats' => $stats,
         ]);
     }
 
@@ -40,7 +61,7 @@ class AgentController extends Controller
             'nik' => 'required|string|size:16',
             'address' => 'nullable|string|max:500',
             'areas' => 'required|array|min:1',
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive',
             'notes' => 'nullable|string|max:1000',
             'ktpPhoto' => 'required|image|mimes:jpeg,jpg,png|max:5120',
         ], [
@@ -114,7 +135,7 @@ class AgentController extends Controller
             'nik' => 'required|string|size:16',
             'address' => 'nullable|string|max:500',
             'areas' => 'required|array|min:1',
-            'status' => 'required|in:active,inactive,pending',
+            'status' => 'required|in:active,inactive',
         ]);
 
         $agent->update($validated);
@@ -129,6 +150,36 @@ class AgentController extends Controller
         $agent->delete();
 
         return redirect()->route('pic.agents.index')->with('success', 'Agen berhasil dihapus');
+    }
+
+    public function resetPassword(Request $request, Agent $agent)
+    {
+        $this->authorizeAgent($agent);
+
+        $validated = $request->validate([
+            'password' => 'required|string|min:6',
+        ], [
+            'password.required' => 'Password wajib diisi',
+            'password.min' => 'Password minimal 6 karakter',
+        ]);
+
+        $agent->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        return back()->with('success', 'Password agen berhasil direset');
+    }
+
+    public function forceLogout(Agent $agent)
+    {
+        $this->authorizeAgent($agent);
+
+        // Delete all sessions for this agent
+        \DB::table('sessions')
+            ->where('user_id', $agent->id)
+            ->delete();
+
+        return back()->with('success', 'Semua sesi agen berhasil dilogout');
     }
 
     private function authorizeAgent(Agent $agent): void

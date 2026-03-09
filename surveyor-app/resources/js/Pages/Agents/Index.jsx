@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import DataTable from '@/Components/DataTable';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import Button from '@/Components/Button';
-import { Link } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { 
     Users, 
     UserCheck, 
     UserX, 
-    Clock, 
+    ClipboardList, 
     Plus,
     Eye,
     Edit3,
@@ -31,34 +31,28 @@ import {
     Link2
 } from 'lucide-react';
 
-// Mock data - will be replaced with server-side data
-const mockAgents = [
-    { id: 1, name: 'Ahmad Sudrajat', email: 'ahmad.sudrajat@email.com', phone: '08123456789', areas: ['Jakarta Selatan', 'Jakarta Pusat'], status: 'active', surveys: 45, joinDate: '2024-01-15' },
-    { id: 2, name: 'Budi Santoso', email: 'budi.santoso@email.com', phone: '08234567890', areas: ['Jakarta Barat'], status: 'active', surveys: 32, joinDate: '2024-02-20' },
-    { id: 3, name: 'Citra Dewi', email: 'citra.dewi@email.com', phone: '08345678901', areas: ['Jakarta Timur', 'Bekasi'], status: 'inactive', surveys: 28, joinDate: '2024-01-08' },
-    { id: 4, name: 'Dedi Kurniawan', email: 'dedi.k@email.com', phone: '08456789012', areas: ['Jakarta Pusat'], status: 'active', surveys: 51, joinDate: '2023-11-10' },
-    { id: 5, name: 'Eka Putri', email: 'eka.putri@email.com', phone: '08567890123', areas: ['Jakarta Utara'], status: 'pending', surveys: 0, joinDate: '2024-03-01' },
-    { id: 6, name: 'Fajar Ramadhan', email: 'fajar.r@email.com', phone: '08678901234', areas: ['Tangerang', 'Jakarta Barat', 'Depok'], status: 'active', surveys: 67, joinDate: '2023-09-15' },
-    { id: 7, name: 'Gita Nuraini', email: 'gita.n@email.com', phone: '08789012345', areas: ['Bekasi'], status: 'active', surveys: 23, joinDate: '2024-02-01' },
-    { id: 8, name: 'Hendra Wijaya', email: 'hendra.w@email.com', phone: '08890123456', areas: ['Depok', 'Bogor'], status: 'inactive', surveys: 15, joinDate: '2023-12-20' },
-    { id: 9, name: 'Indah Permata', email: 'indah.p@email.com', phone: '08901234567', areas: ['Bogor'], status: 'active', surveys: 38, joinDate: '2024-01-25' },
-    { id: 10, name: 'Joko Susilo', email: 'joko.s@email.com', phone: '08012345678', areas: ['Jakarta Selatan'], status: 'active', surveys: 42, joinDate: '2023-10-05' },
-    { id: 11, name: 'Kartika Sari', email: 'kartika.s@email.com', phone: '08123456780', areas: ['Jakarta Barat', 'Tangerang'], status: 'pending', surveys: 0, joinDate: '2024-03-05' },
-    { id: 12, name: 'Lukman Hakim', email: 'lukman.h@email.com', phone: '08234567891', areas: ['Jakarta Timur'], status: 'active', surveys: 29, joinDate: '2024-01-18' },
-];
-
 const statusConfig = {
     active: { label: 'Aktif', color: 'emerald' },
     inactive: { label: 'Nonaktif', color: 'red' },
-    pending: { label: 'Pending', color: 'amber' },
 };
 
-export default function AgentsIndex() {
+export default function AgentsIndex({ agents: initialAgents = [], stats: initialStats = {} }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
+    const { flash } = usePage().props;
 
-    const [agents] = useState(mockAgents);
+    // Handle flash messages
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]);
+
+    const [agents] = useState(initialAgents);
     const [selectedAgent, setSelectedAgent] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -101,12 +95,12 @@ export default function AgentsIndex() {
         toast.success('QR Code sedang diunduh');
     };
 
-    // Summary stats
+    // Use stats from props
     const stats = {
-        total: agents.length,
-        active: agents.filter(a => a.status === 'active').length,
-        inactive: agents.filter(a => a.status === 'inactive').length,
-        pending: agents.filter(a => a.status === 'pending').length,
+        total: initialStats.total || 0,
+        active: initialStats.active || 0,
+        inactive: initialStats.inactive || 0,
+        totalSurveys: initialStats.totalSurveys || 0,
     };
 
     // Filter by tab
@@ -120,8 +114,15 @@ export default function AgentsIndex() {
     };
 
     const confirmDelete = () => {
-        toast.success(`Agen ${selectedAgent.name} berhasil dihapus`);
-        setSelectedAgent(null);
+        router.delete(`/agents/${selectedAgent.id}`, {
+            onSuccess: () => {
+                setShowDeleteModal(false);
+                setSelectedAgent(null);
+            },
+            onError: () => {
+                toast.error('Gagal menghapus agen');
+            },
+        });
     };
 
     const handleViewDetail = (agent) => {
@@ -163,10 +164,16 @@ export default function AgentsIndex() {
             toast.error('Password minimal 6 karakter');
             return;
         }
-        toast.success(`Password ${selectedAgent.name} berhasil direset`);
-        setShowResetPasswordModal(false);
-        setSelectedAgent(null);
-        setNewPassword('');
+        router.put(`/agents/${selectedAgent.id}/reset-password`, { password: newPassword }, {
+            onSuccess: () => {
+                setShowResetPasswordModal(false);
+                setSelectedAgent(null);
+                setNewPassword('');
+            },
+            onError: () => {
+                toast.error('Gagal mereset password');
+            },
+        });
     };
 
     const handleForceLogout = (agent) => {
@@ -175,9 +182,15 @@ export default function AgentsIndex() {
     };
 
     const confirmForceLogout = () => {
-        toast.success(`Semua sesi ${selectedAgent.name} berhasil dilogout`);
-        setShowForceLogoutModal(false);
-        setSelectedAgent(null);
+        router.post(`/agents/${selectedAgent.id}/force-logout`, {}, {
+            onSuccess: () => {
+                setShowForceLogoutModal(false);
+                setSelectedAgent(null);
+            },
+            onError: () => {
+                toast.error('Gagal logout agen');
+            },
+        });
     };
 
     const bulkActions = [
@@ -362,7 +375,6 @@ export default function AgentsIndex() {
         { key: 'all', label: 'Semua', count: stats.total },
         { key: 'active', label: 'Aktif', count: stats.active },
         { key: 'inactive', label: 'Nonaktif', count: stats.inactive },
-        { key: 'pending', label: 'Pending', count: stats.pending },
     ];
 
     return (
@@ -397,7 +409,7 @@ export default function AgentsIndex() {
                     <SummaryCard title="Total Agen" value={stats.total} icon={Users} color="blue" />
                     <SummaryCard title="Agen Aktif" value={stats.active} icon={UserCheck} color="emerald" />
                     <SummaryCard title="Agen Nonaktif" value={stats.inactive} icon={UserX} color="red" />
-                    <SummaryCard title="Pending" value={stats.pending} icon={Clock} color="amber" />
+                    <SummaryCard title="Total Survei" value={stats.totalSurveys} icon={ClipboardList} color="amber" />
                 </div>
 
                 {/* Tabs */}

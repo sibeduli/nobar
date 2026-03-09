@@ -24,7 +24,6 @@ const areaOptions = [
 const statusOptions = [
     { value: 'active', label: 'Aktif' },
     { value: 'inactive', label: 'Nonaktif' },
-    { value: 'pending', label: 'Pending' },
 ];
 
 const initialFormData = {
@@ -36,7 +35,7 @@ const initialFormData = {
     nik: '',
     address: '',
     areas: [],
-    status: 'pending',
+    status: 'active',
     notes: '',
     ktpPhoto: null,
 };

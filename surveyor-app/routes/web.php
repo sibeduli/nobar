@@ -46,6 +46,8 @@ Route::middleware('auth:pic')->group(function () {
     Route::get('/agents/{agent}/edit', [AgentController::class, 'edit'])->name('pic.agents.edit');
     Route::put('/agents/{agent}', [AgentController::class, 'update'])->name('pic.agents.update');
     Route::delete('/agents/{agent}', [AgentController::class, 'destroy'])->name('pic.agents.destroy');
+    Route::put('/agents/{agent}/reset-password', [AgentController::class, 'resetPassword'])->name('pic.agents.reset-password');
+    Route::post('/agents/{agent}/force-logout', [AgentController::class, 'forceLogout'])->name('pic.agents.force-logout');
 
     Route::get('/agents/activities', function () {
         return Inertia::render('Agents/Activities');
