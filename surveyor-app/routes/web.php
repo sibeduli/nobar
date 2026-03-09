@@ -69,6 +69,8 @@ Route::middleware('auth:pic')->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('pic.settings');
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('pic.settings.profile');
     Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('pic.settings.password');
+    Route::delete('/settings/sessions/{sessionId}', [SettingsController::class, 'revokeSession'])->name('pic.settings.revoke-session');
+    Route::delete('/settings/sessions', [SettingsController::class, 'revokeAllSessions'])->name('pic.settings.revoke-all-sessions');
 });
 
 // ==================== Agent Auth Routes (Guest) ====================

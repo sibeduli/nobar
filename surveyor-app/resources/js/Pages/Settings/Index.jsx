@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
-import Modal, { ConfirmModal } from '@/Components/Modal';
+import { ConfirmModal } from '@/Components/Modal';
 import FormInput from '@/Components/FormInput';
 import Button from '@/Components/Button';
 import {
@@ -17,7 +17,6 @@ import {
     Edit3,
     Mail,
     Phone,
-    MapPin,
     Calendar,
     Shield,
     Trash2,
@@ -26,12 +25,7 @@ import {
     QrCode,
 } from 'lucide-react';
 
-// Mock active sessions (will be implemented later)
-const mockSessions = [
-    { id: 1, device: 'Chrome on Windows', ip: '192.168.1.100', location: 'Jakarta, Indonesia', lastActive: '2024-03-10T15:30:00', current: true },
-];
-
-export default function SettingsIndex({ user }) {
+export default function SettingsIndex({ user, sessions: initialSessions = [] }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
@@ -56,7 +50,14 @@ export default function SettingsIndex({ user }) {
         window.history.pushState({}, '', url);
     };
 
-    const [sessions, setSessions] = useState(mockSessions);
+    const [sessions, setSessions] = useState(initialSessions);
+    const [revokingSession, setRevokingSession] = useState(null);
+    const [showRevokeAllModal, setShowRevokeAllModal] = useState(false);
+
+    // Update sessions when props change
+    useEffect(() => {
+        setSessions(initialSessions);
+    }, [initialSessions]);
 
     const initialProfileData = {
         name: user?.name || '',
@@ -137,13 +138,34 @@ export default function SettingsIndex({ user }) {
     };
 
     const revokeSession = (sessionId) => {
-        setSessions(sessions.filter(s => s.id !== sessionId));
-        toast.success('Sesi berhasil dihapus');
+        setRevokingSession(sessionId);
+        router.delete(`/settings/sessions/${sessionId}`, {
+            onSuccess: () => {
+                setSessions(sessions.filter(s => s.id !== sessionId));
+                setRevokingSession(null);
+            },
+            onError: () => {
+                setRevokingSession(null);
+                toast.error('Gagal menghapus sesi');
+            },
+        });
     };
 
     const revokeAllSessions = () => {
-        setSessions(sessions.filter(s => s.current));
-        toast.success('Semua sesi lain berhasil dihapus');
+        setShowRevokeAllModal(true);
+    };
+
+    const confirmRevokeAllSessions = () => {
+        router.delete('/settings/sessions', {
+            onSuccess: () => {
+                setSessions(sessions.filter(s => s.current));
+                setShowRevokeAllModal(false);
+            },
+            onError: () => {
+                setShowRevokeAllModal(false);
+                toast.error('Gagal menghapus sesi');
+            },
+        });
     };
 
     const tabs = [
@@ -474,10 +496,6 @@ export default function SettingsIndex({ user }) {
                                                 )}
                                             </div>
                                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                                                <span className={`text-xs flex items-center gap-1 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                                    <MapPin className="w-3 h-3" />
-                                                    {session.location}
-                                                </span>
                                                 <span className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
                                                     IP: {session.ip}
                                                 </span>
@@ -491,7 +509,8 @@ export default function SettingsIndex({ user }) {
                                     {!session.current && (
                                         <button
                                             onClick={() => revokeSession(session.id)}
-                                            className={`p-2 rounded-lg transition-colors flex-shrink-0 ${isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-600'}`}
+                                            disabled={revokingSession === session.id}
+                                            className={`p-2 rounded-lg transition-colors flex-shrink-0 ${isDark ? 'hover:bg-red-500/10 text-red-400' : 'hover:bg-red-50 text-red-600'} ${revokingSession === session.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <Trash2 className="w-4 h-4" />
                                         </button>
@@ -545,6 +564,17 @@ export default function SettingsIndex({ user }) {
                 confirmText="Ubah Password"
                 confirmVariant="primary"
                 loading={processingPassword}
+            />
+
+            {/* Revoke All Sessions Modal */}
+            <ConfirmModal
+                isOpen={showRevokeAllModal}
+                onClose={() => setShowRevokeAllModal(false)}
+                onConfirm={confirmRevokeAllSessions}
+                title="Logout Semua Perangkat Lain"
+                message="Semua sesi aktif di perangkat lain akan dihapus. Anda harus login ulang di perangkat tersebut."
+                confirmText="Ya, Logout Semua"
+                confirmVariant="danger"
             />
         </DashboardLayout>
     );
