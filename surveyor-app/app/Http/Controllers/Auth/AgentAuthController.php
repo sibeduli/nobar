@@ -79,4 +79,44 @@ class AgentAuthController extends Controller
 
         return redirect()->route('agent.login');
     }
+
+    /**
+     * Show agent profile
+     */
+    public function profile()
+    {
+        $agent = Auth::guard('agent')->user();
+        $company = $agent->company;
+
+        // Count surveys (placeholder - will be implemented when Survey model exists)
+        $totalSurveys = 0;
+        $approvedSurveys = 0;
+        
+        // Check if surveys relationship exists
+        if (method_exists($agent, 'surveys')) {
+            $totalSurveys = $agent->surveys()->count();
+            $approvedSurveys = $agent->surveys()->where('status', 'approved')->count();
+        }
+
+        return Inertia::render('Agent/Profile', [
+            'agent' => [
+                'id' => $agent->id,
+                'name' => $agent->name,
+                'phone' => $agent->phone,
+                'email' => $agent->email,
+                'nik' => $agent->nik,
+                'address' => $agent->address,
+                'areas' => $agent->areas ?? [],
+                'qr_code' => $agent->qr_code,
+                'status' => $agent->status,
+                'join_date' => $agent->created_at->format('Y-m-d'),
+                'total_surveys' => $totalSurveys,
+                'approved_surveys' => $approvedSurveys,
+            ],
+            'company' => [
+                'name' => $company->name ?? 'Unknown',
+                'code' => $company->code ?? '',
+            ],
+        ]);
+    }
 }

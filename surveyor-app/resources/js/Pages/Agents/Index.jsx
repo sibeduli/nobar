@@ -5,6 +5,7 @@ import { useToast } from '@/Contexts/ToastContext';
 import DataTable from '@/Components/DataTable';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import Button from '@/Components/Button';
+import AgentIdCard from '@/Components/AgentIdCard';
 import { Link, router, usePage } from '@inertiajs/react';
 import { 
     Users, 
@@ -38,7 +39,7 @@ const statusConfig = {
     inactive: { label: 'Nonaktif', color: 'red' },
 };
 
-export default function AgentsIndex({ agents: initialAgents = [], stats: initialStats = {} }) {
+export default function AgentsIndex({ agents: initialAgents = [], stats: initialStats = {}, company = {} }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
@@ -66,6 +67,7 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
     const [newPassword, setNewPassword] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showLoginLinkModal, setShowLoginLinkModal] = useState(false);
+    const [showIdCardModal, setShowIdCardModal] = useState(false);
 
     // MOCK: Get agent login URL - will use actual domain in production
     const getAgentLoginUrl = () => {
@@ -603,6 +605,16 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                             <Button variant="ghost" onClick={() => setShowDetailModal(false)}>
                                 Tutup
                             </Button>
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => {
+                                    setShowDetailModal(false);
+                                    setShowIdCardModal(true);
+                                }}
+                            >
+                                <Download className="w-4 h-4" />
+                                Unduh Kartu ID
+                            </Button>
                             <Link href={`/agents/${selectedAgent.id}/edit`}>
                                 <Button>
                                     <Edit3 className="w-4 h-4" />
@@ -731,6 +743,14 @@ export default function AgentsIndex({ agents: initialAgents = [], stats: initial
                     </div>
                 </div>
             </Modal>
+
+            {/* Agent ID Card Modal */}
+            <AgentIdCard
+                agent={selectedAgent}
+                company={company}
+                isOpen={showIdCardModal}
+                onClose={() => setShowIdCardModal(false)}
+            />
         </DashboardLayout>
     );
 }

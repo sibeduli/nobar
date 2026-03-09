@@ -112,7 +112,5 @@ Route::middleware('auth:agent')->prefix('agent')->group(function () {
         return Inertia::render('Agent/Violations/Report');
     });
 
-    Route::get('/profile', function () {
-        return Inertia::render('Agent/Profile');
-    });
+    Route::get('/profile', [App\Http\Controllers\Auth\AgentAuthController::class, 'profile']);
 });

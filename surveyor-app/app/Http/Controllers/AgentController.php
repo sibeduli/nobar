@@ -30,6 +30,7 @@ class AgentController extends Controller
                     'status' => $agent->status,
                     'ktp_photo' => $agent->ktp_photo ? '/storage/' . $agent->ktp_photo : null,
                     'notes' => $agent->notes,
+                    'qr_code' => $agent->qr_code,
                     'surveys' => $agent->surveys_count,
                     'joinDate' => $agent->created_at?->format('Y-m-d'),
                 ];
@@ -45,6 +46,10 @@ class AgentController extends Controller
         return Inertia::render('Agents/Index', [
             'agents' => $agents->values(),
             'stats' => $stats,
+            'company' => [
+                'name' => $pic->company->name ?? 'Unknown',
+                'code' => $pic->company->code ?? '',
+            ],
         ]);
     }
 
