@@ -2,6 +2,8 @@ import { useState } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import DataTable from '@/Components/DataTable';
+import Modal from '@/Components/Modal';
+import { router } from '@inertiajs/react';
 import {
     MousePointerClick,
     LogIn,
@@ -14,65 +16,52 @@ import {
     XCircle,
     FileText,
     Users,
-    Map,
-    MessageSquare,
-    Settings,
+    RefreshCw,
+    Clock,
 } from 'lucide-react';
 
 // Activity types with icons and colors
 const activityTypes = {
     login: { label: 'Login', icon: LogIn, color: 'blue' },
     logout: { label: 'Logout', icon: LogOut, color: 'gray' },
-    view_survey: { label: 'Lihat Survey', icon: Eye, color: 'cyan' },
     approve_survey: { label: 'Setujui Survey', icon: CheckCircle, color: 'emerald' },
     reject_survey: { label: 'Tolak Survey', icon: XCircle, color: 'red' },
+    update_survey: { label: 'Update Survey', icon: Edit3, color: 'amber' },
+    edit_survey: { label: 'Edit Survey', icon: Edit3, color: 'amber' },
+    delete_survey: { label: 'Hapus Survey', icon: Trash2, color: 'red' },
     export_data: { label: 'Export Data', icon: Download, color: 'purple' },
-    view_agent: { label: 'Lihat Agen', icon: Users, color: 'cyan' },
+    create_agent: { label: 'Tambah Agen', icon: Users, color: 'emerald' },
     edit_agent: { label: 'Edit Agen', icon: Edit3, color: 'amber' },
     delete_agent: { label: 'Hapus Agen', icon: Trash2, color: 'red' },
-    create_agent: { label: 'Tambah Agen', icon: Users, color: 'emerald' },
-    view_map: { label: 'Lihat Peta', icon: Map, color: 'teal' },
-    send_message: { label: 'Kirim Pesan', icon: MessageSquare, color: 'blue' },
-    update_settings: { label: 'Update Pengaturan', icon: Settings, color: 'gray' },
-    view_report: { label: 'Lihat Laporan', icon: FileText, color: 'indigo' },
 };
 
-// Mock current user's activity data (single logged-in PIC)
-const mockActivities = [
-    { id: 1, activityType: 'login', description: 'Login ke sistem', page: '/login', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:30:00' },
-    { id: 2, activityType: 'view_survey', description: 'Membuka halaman Data Survey', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:32:00' },
-    { id: 3, activityType: 'view_survey', description: 'Melihat detail survey "Warkop Bola Mania"', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:35:00' },
-    { id: 4, activityType: 'approve_survey', description: 'Menyetujui survey "Warkop Bola Mania"', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:36:00' },
-    { id: 5, activityType: 'approve_survey', description: 'Menyetujui survey "Resto Piala Dunia"', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:40:00' },
-    { id: 6, activityType: 'reject_survey', description: 'Menolak survey "Bar Kick Off" - Izin tidak lengkap', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T08:45:00' },
-    { id: 7, activityType: 'view_agent', description: 'Membuka halaman Lihat Agen', page: '/agents', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T09:00:00' },
-    { id: 8, activityType: 'create_agent', description: 'Menambahkan agen baru "Ahmad Sudrajat"', page: '/agents/create', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T09:15:00' },
-    { id: 9, activityType: 'edit_agent', description: 'Mengubah data agen "Budi Santoso"', page: '/agents', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T09:30:00' },
-    { id: 10, activityType: 'view_map', description: 'Membuka halaman Peta Venue', page: '/venues/map', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T10:00:00' },
-    { id: 11, activityType: 'export_data', description: 'Export data survey ke Excel', page: '/surveys', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T10:30:00' },
-    { id: 12, activityType: 'send_message', description: 'Mengirim pesan ke Pusat Bantuan', page: '/help', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T11:00:00' },
-    { id: 13, activityType: 'view_report', description: 'Melihat laporan bulanan Februari 2024', page: '/reports', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T14:00:00' },
-    { id: 14, activityType: 'update_settings', description: 'Mengubah pengaturan notifikasi', page: '/settings', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T15:00:00' },
-    { id: 15, activityType: 'logout', description: 'Logout dari sistem', page: '/logout', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-10T17:00:00' },
-    { id: 16, activityType: 'login', description: 'Login ke sistem', page: '/login', ipAddress: '192.168.1.100', userAgent: 'Chrome/120.0 Windows', timestamp: '2024-03-11T08:00:00' },
-];
-
-export default function PICActivities() {
+export default function PICActivities({ activities: initialActivities = [], stats: initialStats = {} }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
     
-    const [activities] = useState(mockActivities);
+    const [activities] = useState(initialActivities);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedActivity, setSelectedActivity] = useState(null);
 
     // Sort by timestamp descending
     const sortedActivities = [...activities].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-    // Stats
-    const stats = {
-        total: activities.length,
-        pages: [...new Set(activities.map(a => a.page))].length,
-        approvals: activities.filter(a => a.activityType === 'approve_survey').length,
-        rejections: activities.filter(a => a.activityType === 'reject_survey').length,
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        router.reload({
+            only: ['activities', 'stats'],
+            onFinish: () => setIsRefreshing(false),
+        });
     };
+
+    const handleViewDetail = (activity) => {
+        setSelectedActivity(activity);
+        setShowDetailModal(true);
+    };
+
+    // Stats from backend
+    const stats = initialStats;
 
     const ActivityBadge = ({ type }) => {
         const config = activityTypes[type];
@@ -126,16 +115,7 @@ export default function PICActivities() {
             key: 'description',
             label: 'Deskripsi',
             render: (value) => (
-                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</span>
-            )
-        },
-        {
-            key: 'page',
-            label: 'Halaman',
-            render: (value) => (
-                <span className={`text-sm font-mono px-2 py-0.5 rounded ${isDark ? 'bg-emerald-950/50 text-emerald-400' : 'bg-gray-100 text-gray-700'}`}>
-                    {value}
-                </span>
+                <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || '-'}</span>
             )
         },
         {
@@ -148,13 +128,55 @@ export default function PICActivities() {
                 </div>
             )
         },
+        {
+            key: 'actions',
+            label: '',
+            sortable: false,
+            render: (_, row) => (
+                <button
+                    onClick={() => handleViewDetail(row)}
+                    className={`p-1.5 rounded-lg transition-colors
+                        ${isDark ? 'text-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-500/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}
+                    `}
+                    title="Lihat Detail"
+                >
+                    <Eye className="w-4 h-4" />
+                </button>
+            )
+        },
     ];
 
     const filters = [
         {
             key: 'activityType',
             label: 'Jenis Aktivitas',
-            options: Object.entries(activityTypes).map(([key, val]) => ({ value: key, label: val.label }))
+            options: [
+                { value: 'auth', label: 'Login/Logout' },
+                { value: 'login', label: 'Login' },
+                { value: 'logout', label: 'Logout' },
+                { value: 'survey', label: 'Aktivitas Survey' },
+                { value: 'approve_survey', label: 'Setujui Survey' },
+                { value: 'reject_survey', label: 'Tolak Survey' },
+                { value: 'edit_survey', label: 'Edit Survey' },
+                { value: 'delete_survey', label: 'Hapus Survey' },
+                { value: 'agent', label: 'Aktivitas Agen' },
+                { value: 'create_agent', label: 'Tambah Agen' },
+                { value: 'edit_agent', label: 'Edit Agen' },
+                { value: 'delete_agent', label: 'Hapus Agen' },
+                { value: 'export_data', label: 'Export Data' },
+            ],
+            customFilter: (item, filterValue) => {
+                if (filterValue === 'auth') {
+                    return item.activityType === 'login' || item.activityType === 'logout';
+                }
+                if (filterValue === 'survey') {
+                    return ['approve_survey', 'reject_survey', 'update_survey', 'edit_survey', 'delete_survey'].includes(item.activityType);
+                }
+                if (filterValue === 'agent') {
+                    return ['create_agent', 'edit_agent', 'delete_agent'].includes(item.activityType);
+                }
+                return item.activityType === filterValue;
+            }
         },
     ];
 
@@ -172,14 +194,14 @@ export default function PICActivities() {
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/20' : 'bg-teal-100'}`}>
                                 <MousePointerClick className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
                             </div>
                             <div>
-                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.total}</p>
+                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.total || 0}</p>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Total Aktivitas</p>
                             </div>
                         </div>
@@ -187,11 +209,11 @@ export default function PICActivities() {
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
-                                <FileText className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                                <LogIn className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                             </div>
                             <div>
-                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.pages}</p>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Halaman Dikunjungi</p>
+                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.logins || 0}</p>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Login</p>
                             </div>
                         </div>
                     </div>
@@ -201,7 +223,7 @@ export default function PICActivities() {
                                 <CheckCircle className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
                             </div>
                             <div>
-                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.approvals}</p>
+                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.approvals || 0}</p>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Persetujuan</p>
                             </div>
                         </div>
@@ -212,11 +234,38 @@ export default function PICActivities() {
                                 <XCircle className={`w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
                             </div>
                             <div>
-                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.rejections}</p>
+                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.rejections || 0}</p>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Penolakan</p>
                             </div>
                         </div>
                     </div>
+                    <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                                <Edit3 className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                            </div>
+                            <div>
+                                <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{stats.edits || 0}</p>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Edit Data</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Refresh Button */}
+                <div className="flex justify-end">
+                    <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${isDark 
+                                ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-50' 
+                                : 'bg-teal-100 text-teal-700 hover:bg-teal-200 disabled:opacity-50'}
+                        `}
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Perbarui
+                    </button>
                 </div>
 
                 {/* Activity Table */}
@@ -224,10 +273,99 @@ export default function PICActivities() {
                     data={sortedActivities}
                     columns={columns}
                     filters={filters}
-                    searchKeys={['description', 'page', 'ipAddress']}
+                    searchKeys={['description', 'ipAddress']}
                     searchPlaceholder="Cari aktivitas..."
+                    onRowDoubleClick={handleViewDetail}
                 />
             </div>
+
+            {/* Detail Modal */}
+            <Modal
+                isOpen={showDetailModal}
+                onClose={() => setShowDetailModal(false)}
+                title="Detail Aktivitas"
+                size="md"
+            >
+                {selectedActivity && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <ActivityBadge type={selectedActivity.activityType} />
+                        </div>
+
+                        <div className={`p-4 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
+                            <h3 className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
+                                {selectedActivity.description || '-'}
+                            </h3>
+                        </div>
+
+                        <div className={`space-y-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                            <div className="flex items-start gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                                    ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}
+                                `}>
+                                    <Clock className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Waktu</p>
+                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>
+                                        {new Date(selectedActivity.timestamp).toLocaleString('id-ID', {
+                                            day: 'numeric',
+                                            month: 'long',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                                    ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}
+                                `}>
+                                    <FileText className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>IP Address</p>
+                                    <p className={`text-sm font-mono ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>
+                                        {selectedActivity.ipAddress}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                                    ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}
+                                `}>
+                                    <FileText className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Browser</p>
+                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>
+                                        {selectedActivity.userAgent}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {selectedActivity.targetType && (
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+                                        ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}
+                                    `}>
+                                        <FileText className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Target</p>
+                                        <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>
+                                            {selectedActivity.targetType} #{selectedActivity.targetId}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </DashboardLayout>
     );
 }

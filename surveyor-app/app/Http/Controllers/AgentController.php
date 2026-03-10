@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agent;
+use App\Models\PicActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -114,6 +115,9 @@ class AgentController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        // Log activity
+        PicActivityLog::log($pic->id, 'create_agent', "Menambahkan agen baru \"{$agent->name}\"", 'Agent', $agent->id);
+
         return redirect()->route('pic.agents.index')->with('success', 'Agen berhasil didaftarkan');
     }
 
@@ -162,6 +166,10 @@ class AgentController extends Controller
 
         $agent->update($validated);
 
+        // Log activity
+        $pic = Auth::guard('pic')->user();
+        PicActivityLog::log($pic->id, 'edit_agent', "Mengubah data agen \"{$agent->name}\"", 'Agent', $agent->id);
+
         return back()->with('success', 'Data agen berhasil diperbarui');
     }
 
@@ -169,7 +177,13 @@ class AgentController extends Controller
     {
         $this->authorizeAgent($agent);
 
+        $pic = Auth::guard('pic')->user();
+        $agentName = $agent->name;
+        
         $agent->delete();
+
+        // Log activity
+        PicActivityLog::log($pic->id, 'delete_agent', "Menghapus agen \"{$agentName}\"", 'Agent', null);
 
         return redirect()->route('pic.agents.index')->with('success', 'Agen berhasil dihapus');
     }

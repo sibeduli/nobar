@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Survey;
+use App\Models\PicActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -97,6 +98,15 @@ class SurveyController extends Controller
             'reviewed_by' => $pic->name,
         ]);
 
+        // Log activity
+        $activityType = $validated['status'] === 'approved' ? 'approve_survey' : ($validated['status'] === 'rejected' ? 'reject_survey' : 'update_survey');
+        $description = $validated['status'] === 'approved' 
+            ? "Menyetujui survey \"{$survey->venue_name}\""
+            : ($validated['status'] === 'rejected' 
+                ? "Menolak survey \"{$survey->venue_name}\""
+                : "Mengubah status survey \"{$survey->venue_name}\"");
+        PicActivityLog::log($pic->id, $activityType, $description, 'Survey', $survey->id);
+
         return back()->with('success', 'Status survey berhasil diperbarui');
     }
 
@@ -187,6 +197,9 @@ class SurveyController extends Controller
 
         $survey->update($updateData);
 
+        // Log activity
+        PicActivityLog::log($pic->id, 'edit_survey', "Mengedit data survey \"{$survey->venue_name}\"", 'Survey', $survey->id);
+
         if ($survey->isViolation()) {
             if ($violationResolved) {
                 $message = 'Pelanggaran berhasil di-resolve oleh PIC';
@@ -262,7 +275,13 @@ class SurveyController extends Controller
     {
         $this->authorizeSurvey($survey);
 
+        $pic = Auth::guard('pic')->user();
+        $venueName = $survey->venue_name;
+        
         $survey->delete();
+
+        // Log activity
+        PicActivityLog::log($pic->id, 'delete_survey', "Menghapus survey \"{$venueName}\"", 'Survey', null);
 
         return back()->with('success', 'Survey berhasil dihapus');
     }
@@ -345,6 +364,9 @@ class SurveyController extends Controller
 
             fclose($file);
         };
+
+        // Log activity
+        PicActivityLog::log($pic->id, 'export_data', "Export data survey ke CSV ({$surveys->count()} data)");
 
         return response()->stream($callback, 200, $headers);
     }

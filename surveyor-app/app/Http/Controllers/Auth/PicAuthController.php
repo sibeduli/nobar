@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Pic;
+use App\Models\PicActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -133,6 +134,9 @@ class PicAuthController extends Controller
         // Update last login
         $pic->update(['last_login_at' => now()]);
 
+        // Log login activity
+        PicActivityLog::log($pic->id, 'login', 'Login ke sistem');
+
         $request->session()->regenerate();
 
         return redirect()->intended('/');
@@ -143,6 +147,13 @@ class PicAuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $pic = Auth::guard('pic')->user();
+        
+        // Log logout activity before logging out
+        if ($pic) {
+            PicActivityLog::log($pic->id, 'logout', 'Logout dari sistem');
+        }
+
         Auth::guard('pic')->logout();
 
         $request->session()->invalidate();

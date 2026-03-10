@@ -69,9 +69,7 @@ Route::middleware('auth:pic')->group(function () {
 
     Route::get('/venues/map', [App\Http\Controllers\SurveyController::class, 'map'])->name('venues.map');
 
-    Route::get('/pic/activities', function () {
-        return Inertia::render('PIC/Activities');
-    });
+    Route::get('/pic/activities', [App\Http\Controllers\PicController::class, 'activities'])->name('pic.activities');
 
     Route::get('/settings', [SettingsController::class, 'index'])->name('pic.settings');
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('pic.settings.profile');
