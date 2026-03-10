@@ -408,4 +408,95 @@ class SurveyController extends Controller
             abort(403, 'Unauthorized');
         }
     }
+
+    /**
+     * Display venues map with real survey data
+     */
+    public function map()
+    {
+        $pic = Auth::guard('pic')->user();
+        $company = $pic->company;
+
+        // Get surveys with location data from agents belonging to this company
+        $surveys = Survey::with('agent')
+            ->whereHas('agent', function ($q) use ($company) {
+                $q->where('company_id', $company->id);
+            })
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Transform surveys for map display
+        $venues = $surveys->map(function ($survey) {
+            return [
+                'id' => $survey->id,
+                'venueName' => $survey->venue_name ?? 'Unknown Venue',
+                'venueType' => $this->getVenueTypeLabel($survey->report_type),
+                'contactPerson' => $survey->getEffectiveContact(),
+                'phone' => $survey->getEffectivePhone(),
+                'address' => $survey->venue_address ?? '',
+                'area' => $this->extractArea($survey->venue_address),
+                'capacityTier' => $this->getCapacityTier($survey->getEffectiveCapacity()),
+                'lat' => (float) $survey->latitude,
+                'lng' => (float) $survey->longitude,
+                'agentName' => $survey->agent?->name ?? 'Unknown',
+                'surveyDate' => $survey->created_at->format('Y-m-d'),
+                'status' => $survey->status,
+                'reportType' => $survey->report_type,
+                'isViolation' => $survey->isViolation(),
+            ];
+        });
+
+        return Inertia::render('Venues/Map', [
+            'venues' => $venues,
+        ]);
+    }
+
+    /**
+     * Get venue type label from report type
+     */
+    private function getVenueTypeLabel(string $reportType): string
+    {
+        return match ($reportType) {
+            'verified' => 'Komersial Terverifikasi',
+            'verified_non_commercial' => 'Non-Komersial',
+            'violation_invalid_qr' => 'Pelanggaran QR',
+            'violation_capacity' => 'Pelanggaran Kapasitas',
+            'violation_ads' => 'Pelanggaran Iklan',
+            'violation_no_license' => 'Tanpa Lisensi',
+            'violation_venue' => 'Venue Tidak Sesuai',
+            'lead' => 'Lead/Penawaran',
+            'documentation' => 'Dokumentasi',
+            default => 'Lainnya',
+        };
+    }
+
+    /**
+     * Extract area from address (simple implementation)
+     */
+    private function extractArea(?string $address): string
+    {
+        if (!$address) return 'Unknown';
+        
+        // Try to extract city/area from address
+        $parts = explode(',', $address);
+        if (count($parts) >= 2) {
+            return trim($parts[count($parts) - 1]);
+        }
+        return 'Unknown';
+    }
+
+    /**
+     * Get capacity tier label
+     */
+    private function getCapacityTier(?int $capacity): string
+    {
+        if (!$capacity) return 'N/A';
+        if ($capacity <= 50) return '≤50';
+        if ($capacity <= 100) return '51-100';
+        if ($capacity <= 250) return '101-250';
+        if ($capacity <= 500) return '251-500';
+        return '501-1000';
+    }
 }

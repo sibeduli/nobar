@@ -69,9 +69,7 @@ Route::middleware('auth:pic')->group(function () {
     Route::put('/surveys/{survey}/pic-edit', [App\Http\Controllers\SurveyController::class, 'picEdit'])->name('pic.surveys.pic-edit');
     Route::delete('/surveys/{survey}/pic-edit', [App\Http\Controllers\SurveyController::class, 'revertPicEdit'])->name('pic.surveys.revert-pic-edit');
 
-    Route::get('/venues/map', function () {
-        return Inertia::render('Venues/Map');
-    });
+    Route::get('/venues/map', [App\Http\Controllers\SurveyController::class, 'map'])->name('venues.map');
 
     Route::get('/pic/activities', function () {
         return Inertia::render('PIC/Activities');

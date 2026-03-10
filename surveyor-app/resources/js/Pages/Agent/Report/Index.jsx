@@ -691,9 +691,32 @@ export default function AgentReport() {
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
                         <h2 className={`text-sm font-semibold mb-3 ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>Lokasi</h2>
                         {location ? (
-                            <div className={`p-3 rounded-lg flex items-center gap-2 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
-                                <Check className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                                <div><p className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lokasi Didapat</p><p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p></div>
+                            <div className="space-y-3">
+                                <div className={`p-3 rounded-lg flex items-center gap-2 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
+                                    <Check className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                    <div><p className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lokasi Didapat</p><p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p></div>
+                                </div>
+                                {/* Map Preview */}
+                                <div className="rounded-lg overflow-hidden border border-emerald-900/30">
+                                    <iframe
+                                        src={`https://www.google.com/maps?q=${location.lat},${location.lng}&z=17&output=embed`}
+                                        width="100%"
+                                        height="150"
+                                        style={{ border: 0 }}
+                                        allowFullScreen=""
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={getLocation}
+                                    disabled={isGettingLocation}
+                                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs ${isDark ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50' : 'bg-gray-100 text-gray-600'}`}
+                                >
+                                    {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                                    {isGettingLocation ? 'Mendapatkan...' : 'Perbarui Lokasi'}
+                                </button>
                             </div>
                         ) : (
                             <button type="button" onClick={getLocation} disabled={isGettingLocation} className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl ${isDark ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-teal-50 border border-teal-200 text-teal-700'}`}>
@@ -885,9 +908,32 @@ export default function AgentReport() {
                 <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
                     <h2 className={`text-sm font-semibold mb-3 ${isDark ? 'text-emerald-400' : 'text-teal-700'}`}>Lokasi</h2>
                     {location ? (
-                        <div className={`p-3 rounded-lg flex items-center gap-2 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
-                            <Check className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                            <div><p className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lokasi Didapat</p><p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p></div>
+                        <div className="space-y-3">
+                            <div className={`p-3 rounded-lg flex items-center gap-2 ${isDark ? 'bg-emerald-500/10' : 'bg-emerald-50'}`}>
+                                <Check className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                <div><p className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lokasi Didapat</p><p className={`text-xs ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>{location.lat.toFixed(6)}, {location.lng.toFixed(6)}</p></div>
+                            </div>
+                            {/* Map Preview */}
+                            <div className="rounded-lg overflow-hidden border border-emerald-900/30">
+                                <iframe
+                                    src={`https://www.google.com/maps?q=${location.lat},${location.lng}&z=17&output=embed`}
+                                    width="100%"
+                                    height="150"
+                                    style={{ border: 0 }}
+                                    allowFullScreen=""
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={getLocation}
+                                disabled={isGettingLocation}
+                                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs ${isDark ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50' : 'bg-gray-100 text-gray-600'}`}
+                            >
+                                {isGettingLocation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                                {isGettingLocation ? 'Mendapatkan...' : 'Perbarui Lokasi'}
+                            </button>
                         </div>
                     ) : (
                         <button type="button" onClick={getLocation} disabled={isGettingLocation} className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl ${isDark ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' : 'bg-teal-50 border border-teal-200 text-teal-700'}`}>

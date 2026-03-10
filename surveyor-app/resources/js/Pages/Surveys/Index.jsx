@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
@@ -63,9 +63,10 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
     const isDark = theme === 'dark';
     const { flash } = usePage().props;
 
-    // Get tab from URL
+    // Get tab and openSurvey from URL
     const urlParams = new URLSearchParams(window.location.search);
     const tabFromUrl = urlParams.get('tab');
+    const openSurveyId = urlParams.get('openSurvey');
 
     // Use props directly instead of local state so data updates on Inertia reload
     const [selectedSurvey, setSelectedSurvey] = useState(null);
@@ -94,6 +95,16 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
     const [showResolveConfirm, setShowResolveConfirm] = useState(false);
     const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
 
+    // Auto-open survey detail modal if openSurvey query param is present
+    useEffect(() => {
+        if (openSurveyId) {
+            const survey = surveys.find(s => s.id === parseInt(openSurveyId));
+            if (survey) {
+                setSelectedSurvey(survey);
+                setShowDetailModal(true);
+            }
+        }
+    }, [openSurveyId, surveys]);
 
     const handleRefresh = () => {
         setIsRefreshing(true);
