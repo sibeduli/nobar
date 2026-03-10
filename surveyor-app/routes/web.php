@@ -41,9 +41,7 @@ Route::middleware('auth:pic')->group(function () {
 
     Route::get('/agents', [AgentController::class, 'index'])->name('pic.agents.index');
     Route::get('/agents/create', [AgentController::class, 'create'])->name('pic.agents.create');
-    Route::get('/agents/activities', function () {
-        return Inertia::render('Agents/Activities');
-    });
+    Route::get('/agents/activities', [AgentController::class, 'activities'])->name('pic.agents.activities');
     Route::get('/agents/export', [AgentController::class, 'export'])->name('pic.agents.export');
     Route::post('/agents/bulk-status', [AgentController::class, 'bulkUpdateStatus'])->name('pic.agents.bulk-status');
     Route::post('/agents/bulk-delete', [AgentController::class, 'bulkDelete'])->name('pic.agents.bulk-delete');

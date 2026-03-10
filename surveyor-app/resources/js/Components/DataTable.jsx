@@ -135,12 +135,17 @@ export default function DataTable({
         // Apply filters
         Object.entries(activeFilters).forEach(([key, value]) => {
             if (value && value !== 'all') {
-                result = result.filter(row => row[key] === value);
+                const filterConfig = filters.find(f => f.key === key);
+                if (filterConfig?.customFilter) {
+                    result = result.filter(row => filterConfig.customFilter(row, value));
+                } else {
+                    result = result.filter(row => row[key] === value);
+                }
             }
         });
 
         return result;
-    }, [data, searchQuery, activeFilters, columns]);
+    }, [data, searchQuery, activeFilters, columns, filters]);
 
     // Sort data
     const sortedData = useMemo(() => {

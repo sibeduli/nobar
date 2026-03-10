@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\AgentActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -62,6 +63,14 @@ class AgentAuthController extends Controller
         // Update last login
         $agent->update(['last_login_at' => now()]);
 
+        // Log login activity
+        AgentActivityLog::create([
+            'agent_id' => $agent->id,
+            'type' => 'login',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
         $request->session()->regenerate();
 
         return redirect()->intended('/agent');
@@ -72,6 +81,18 @@ class AgentAuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $agent = Auth::guard('agent')->user();
+
+        // Log logout activity
+        if ($agent) {
+            AgentActivityLog::create([
+                'agent_id' => $agent->id,
+                'type' => 'logout',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+
         Auth::guard('agent')->logout();
 
         $request->session()->invalidate();

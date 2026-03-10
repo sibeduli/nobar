@@ -290,4 +290,109 @@ class AgentController extends Controller
             ->header('Content-Type', 'text/csv')
             ->header('Content-Disposition', 'attachment; filename="agents-export-' . date('Y-m-d') . '.csv"');
     }
+
+    /**
+     * Show agent activities (surveys + login/logout)
+     */
+    public function activities()
+    {
+        $pic = Auth::guard('pic')->user();
+        $company = $pic->company;
+
+        // Get all agents for this company (for filter dropdown)
+        $agents = Agent::where('company_id', $company->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn($agent) => [
+                'value' => (string) $agent->id,
+                'label' => $agent->name,
+            ]);
+
+        // Get all surveys from agents in this company
+        $surveys = \App\Models\Survey::with('agent')
+            ->whereHas('agent', fn($q) => $q->where('company_id', $company->id))
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Get login/logout activities
+        $loginLogs = \App\Models\AgentActivityLog::with('agent')
+            ->whereHas('agent', fn($q) => $q->where('company_id', $company->id))
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Transform surveys to activities
+        $surveyActivities = $surveys->map(function ($survey) {
+            return [
+                'id' => 'survey_' . $survey->id,
+                'agentId' => (string) $survey->agent_id,
+                'agentName' => $survey->agent?->name ?? 'Unknown',
+                'type' => 'survey',
+                'description' => $this->getActivityDescription($survey),
+                'location' => $survey->venue_address ?? '-',
+                'ipAddress' => $survey->ip_address ?? '-',
+                'timestamp' => $survey->created_at->format('Y-m-d H:i'),
+                'surveyStatus' => $survey->status,
+                'reportType' => $survey->report_type,
+                'venueName' => $survey->venue_name,
+                'surveyId' => $survey->id,
+            ];
+        });
+
+        // Transform login/logout to activities
+        $authActivities = $loginLogs->map(function ($log) {
+            return [
+                'id' => 'auth_' . $log->id,
+                'agentId' => (string) $log->agent_id,
+                'agentName' => $log->agent?->name ?? 'Unknown',
+                'type' => $log->type, // 'login' or 'logout'
+                'description' => $log->type === 'login' ? 'Login ke aplikasi' : 'Logout dari aplikasi',
+                'location' => '-',
+                'ipAddress' => $log->ip_address ?? '-',
+                'timestamp' => $log->created_at->format('Y-m-d H:i'),
+                'surveyStatus' => null,
+                'reportType' => null,
+                'venueName' => null,
+                'surveyId' => null,
+            ];
+        });
+
+        // Merge and sort by timestamp
+        $allActivities = $surveyActivities->concat($authActivities)
+            ->sortByDesc('timestamp')
+            ->values();
+
+        $stats = [
+            'total' => $allActivities->count(),
+            'surveys' => $surveyActivities->count(),
+            'logins' => $authActivities->where('type', 'login')->count(),
+            'logouts' => $authActivities->where('type', 'logout')->count(),
+        ];
+
+        return Inertia::render('Agents/Activities', [
+            'activities' => $allActivities,
+            'agents' => $agents->values(),
+            'stats' => $stats,
+        ]);
+    }
+
+    private function getActivityDescription($survey): string
+    {
+        $reportTypeLabels = [
+            'verified' => 'Survei Terverifikasi',
+            'verified_non_commercial' => 'Survei Non-Komersial',
+            'violation_invalid_qr' => 'Laporan QR Invalid',
+            'violation_capacity' => 'Laporan Pelanggaran Kapasitas',
+            'violation_ads' => 'Laporan Iklan Ilegal',
+            'violation_no_license' => 'Laporan Tanpa Lisensi',
+            'violation_venue' => 'Laporan Venue Tidak Sesuai',
+            'lead' => 'Penawaran Lisensi',
+            'documentation' => 'Dokumentasi',
+            'other' => 'Laporan Lainnya',
+        ];
+
+        $typeLabel = $reportTypeLabels[$survey->report_type] ?? 'Survei';
+        $venueName = $survey->venue_name ?? 'Venue';
+
+        return "{$typeLabel}: {$venueName}";
+    }
 }

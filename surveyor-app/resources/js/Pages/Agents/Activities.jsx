@@ -5,81 +5,61 @@ import { useToast } from '@/Contexts/ToastContext';
 import DataTable from '@/Components/DataTable';
 import Modal from '@/Components/Modal';
 import SearchableSelect from '@/Components/SearchableSelect';
+import { router } from '@inertiajs/react';
 import { 
     Activity,
     Clock,
     MapPin,
     FileText,
-    Camera,
     CheckCircle,
-    AlertCircle,
+    LogIn,
+    LogOut,
     Eye,
     Download,
-    Trash2
+    RefreshCw
 } from 'lucide-react';
-
-// Mock agents for filter
-const agentsList = [
-    { value: '1', label: 'Ahmad Sudrajat' },
-    { value: '2', label: 'Budi Santoso' },
-    { value: '3', label: 'Citra Dewi' },
-    { value: '4', label: 'Dedi Kurniawan' },
-    { value: '5', label: 'Eka Putri' },
-    { value: '6', label: 'Fajar Ramadhan' },
-    { value: '7', label: 'Gita Nuraini' },
-    { value: '8', label: 'Hendra Wijaya' },
-];
-
-// Mock activity data
-const mockActivities = [
-    { id: 1, agentId: '1', agentName: 'Ahmad Sudrajat', type: 'survey', description: 'Survei lokasi Warung Makan Sederhana', location: 'Jl. Sudirman No. 45, Jakarta Selatan', timestamp: '2024-03-10 14:30', status: 'completed', hasPhoto: true },
-    { id: 2, agentId: '2', agentName: 'Budi Santoso', type: 'survey', description: 'Survei lokasi Cafe Kopi Nusantara', location: 'Jl. Gatot Subroto No. 12, Jakarta Barat', timestamp: '2024-03-10 13:45', status: 'completed', hasPhoto: true },
-    { id: 3, agentId: '1', agentName: 'Ahmad Sudrajat', type: 'checkin', description: 'Check-in lokasi kerja', location: 'Kantor Pusat TVRI', timestamp: '2024-03-10 08:00', status: 'completed', hasPhoto: false },
-    { id: 4, agentId: '3', agentName: 'Citra Dewi', type: 'survey', description: 'Survei lokasi Restoran Padang Jaya', location: 'Jl. Pemuda No. 78, Jakarta Timur', timestamp: '2024-03-10 11:20', status: 'pending', hasPhoto: true },
-    { id: 5, agentId: '4', agentName: 'Dedi Kurniawan', type: 'report', description: 'Laporan harian survei', location: '-', timestamp: '2024-03-10 17:00', status: 'completed', hasPhoto: false },
-    { id: 6, agentId: '2', agentName: 'Budi Santoso', type: 'checkout', description: 'Check-out lokasi kerja', location: 'Kantor Pusat TVRI', timestamp: '2024-03-09 17:30', status: 'completed', hasPhoto: false },
-    { id: 7, agentId: '5', agentName: 'Eka Putri', type: 'survey', description: 'Survei lokasi Toko Elektronik Jaya', location: 'Jl. Mangga Dua No. 100, Jakarta Utara', timestamp: '2024-03-09 15:00', status: 'failed', hasPhoto: false },
-    { id: 8, agentId: '6', agentName: 'Fajar Ramadhan', type: 'survey', description: 'Survei lokasi Bengkel Motor Abadi', location: 'Jl. Raya Serpong No. 55, Tangerang', timestamp: '2024-03-09 10:30', status: 'completed', hasPhoto: true },
-    { id: 9, agentId: '7', agentName: 'Gita Nuraini', type: 'checkin', description: 'Check-in lokasi kerja', location: 'Kantor Cabang Bekasi', timestamp: '2024-03-09 08:15', status: 'completed', hasPhoto: false },
-    { id: 10, agentId: '8', agentName: 'Hendra Wijaya', type: 'survey', description: 'Survei lokasi Apotek Sehat', location: 'Jl. Margonda Raya No. 200, Depok', timestamp: '2024-03-08 14:00', status: 'completed', hasPhoto: true },
-    { id: 11, agentId: '1', agentName: 'Ahmad Sudrajat', type: 'report', description: 'Laporan mingguan survei', location: '-', timestamp: '2024-03-08 16:30', status: 'completed', hasPhoto: false },
-    { id: 12, agentId: '4', agentName: 'Dedi Kurniawan', type: 'survey', description: 'Survei lokasi Salon Cantik', location: 'Jl. Thamrin No. 30, Jakarta Pusat', timestamp: '2024-03-08 11:00', status: 'completed', hasPhoto: true },
-];
 
 const activityTypeConfig = {
     survey: { label: 'Survei', icon: MapPin, color: 'emerald' },
-    checkin: { label: 'Check-in', icon: Clock, color: 'blue' },
-    checkout: { label: 'Check-out', icon: Clock, color: 'purple' },
-    report: { label: 'Laporan', icon: FileText, color: 'amber' },
+    login: { label: 'Login', icon: LogIn, color: 'blue' },
+    logout: { label: 'Logout', icon: LogOut, color: 'purple' },
 };
 
-const statusConfig = {
-    completed: { label: 'Selesai', color: 'emerald' },
+const surveyStatusConfig = {
+    approved: { label: 'Disetujui', color: 'emerald' },
     pending: { label: 'Pending', color: 'amber' },
-    failed: { label: 'Gagal', color: 'red' },
+    rejected: { label: 'Ditolak', color: 'red' },
 };
 
-export default function AgentActivities() {
+export default function AgentActivities({ activities: initialActivities = [], agents: agentsList = [], stats: initialStats = {} }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
 
-    const [activities] = useState(mockActivities);
     const [selectedActivity, setSelectedActivity] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedAgent, setSelectedAgent] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Filter by agent
     const filteredActivities = !selectedAgent
-        ? activities
-        : activities.filter(a => a.agentId === selectedAgent);
+        ? initialActivities
+        : initialActivities.filter(a => a.agentId === selectedAgent);
 
-    // Stats
-    const stats = {
+    // Stats (recalculate based on filter)
+    const stats = !selectedAgent ? initialStats : {
         total: filteredActivities.length,
         surveys: filteredActivities.filter(a => a.type === 'survey').length,
         completed: filteredActivities.filter(a => a.status === 'completed').length,
         pending: filteredActivities.filter(a => a.status === 'pending').length,
+    };
+
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        router.visit('/agents/activities', {
+            preserveScroll: true,
+            onFinish: () => setIsRefreshing(false),
+        });
     };
 
     const handleViewDetail = (activity) => {
@@ -91,13 +71,8 @@ export default function AgentActivities() {
         toast.info(`Mengekspor ${selected.length} data aktivitas...`);
     };
 
-    const handleDelete = (selected) => {
-        toast.success(`${selected.length} aktivitas berhasil dihapus`);
-    };
-
     const bulkActions = [
         { label: 'Export CSV', icon: Download, onClick: handleExport },
-        { label: 'Hapus', icon: Trash2, onClick: handleDelete, variant: 'danger' },
     ];
 
     const TypeBadge = ({ type }) => {
@@ -118,8 +93,10 @@ export default function AgentActivities() {
         );
     };
 
-    const StatusBadge = ({ status }) => {
-        const config = statusConfig[status];
+    const SurveyStatusBadge = ({ status }) => {
+        if (!status) return <span className={`text-xs ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`}>-</span>;
+        const config = surveyStatusConfig[status];
+        if (!config) return <span className={`text-xs ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`}>-</span>;
         const colors = {
             emerald: isDark ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-emerald-50 text-emerald-700',
             amber: isDark ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30' : 'bg-amber-50 text-amber-700',
@@ -186,18 +163,13 @@ export default function AgentActivities() {
             )
         },
         {
-            key: 'hasPhoto',
-            label: 'Foto',
-            render: (value) => value ? (
-                <Camera className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
-            ) : (
-                <span className={`text-xs ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`}>-</span>
+            key: 'ipAddress',
+            label: 'IP Address',
+            render: (value) => (
+                <span className={`text-xs font-mono ${isDark ? 'text-emerald-400/70' : 'text-gray-600'}`}>
+                    {value || '-'}
+                </span>
             )
-        },
-        {
-            key: 'status',
-            label: 'Status',
-            render: (value) => <StatusBadge status={value} />
         },
         {
             key: 'actions',
@@ -223,19 +195,16 @@ export default function AgentActivities() {
             label: 'Tipe',
             options: [
                 { value: 'survey', label: 'Survei' },
-                { value: 'checkin', label: 'Check-in' },
-                { value: 'checkout', label: 'Check-out' },
-                { value: 'report', label: 'Laporan' },
-            ]
-        },
-        {
-            key: 'status',
-            label: 'Status',
-            options: [
-                { value: 'completed', label: 'Selesai' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'failed', label: 'Gagal' },
-            ]
+                { value: 'auth', label: 'Login/Logout' },
+                { value: 'login', label: 'Login' },
+                { value: 'logout', label: 'Logout' },
+            ],
+            customFilter: (item, filterValue) => {
+                if (filterValue === 'auth') {
+                    return item.type === 'login' || item.type === 'logout';
+                }
+                return item.type === filterValue;
+            }
         }
     ];
 
@@ -278,24 +247,34 @@ export default function AgentActivities() {
                         </p>
                     </div>
 
-                    {/* Agent Filter */}
-                    <div className="w-64">
-                        <SearchableSelect
-                            options={agentsList}
-                            value={selectedAgent}
-                            onChange={setSelectedAgent}
-                            placeholder="Semua Agen"
-                            searchPlaceholder="Cari nama agen..."
-                        />
+                    {/* Actions */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${isDark ? 'bg-emerald-950/50 text-emerald-400 hover:bg-emerald-900/50' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'}`}
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            Perbarui
+                        </button>
+                        <div className="w-64">
+                            <SearchableSelect
+                                options={agentsList}
+                                value={selectedAgent}
+                                onChange={setSelectedAgent}
+                                placeholder="Semua Agen"
+                                searchPlaceholder="Cari nama agen..."
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <SummaryCard title="Total Aktivitas" value={stats.total} icon={Activity} color="blue" />
-                    <SummaryCard title="Total Survei" value={stats.surveys} icon={MapPin} color="emerald" />
-                    <SummaryCard title="Selesai" value={stats.completed} icon={CheckCircle} color="purple" />
-                    <SummaryCard title="Pending" value={stats.pending} icon={AlertCircle} color="amber" />
+                    <SummaryCard title="Total Aktivitas" value={stats.total || 0} icon={Activity} color="blue" />
+                    <SummaryCard title="Total Survei" value={stats.surveys || 0} icon={MapPin} color="emerald" />
+                    <SummaryCard title="Login" value={stats.logins || 0} icon={LogIn} color="purple" />
+                    <SummaryCard title="Logout" value={stats.logouts || 0} icon={LogOut} color="amber" />
                 </div>
 
                 {/* Data Table */}
@@ -307,6 +286,7 @@ export default function AgentActivities() {
                     selectable
                     bulkActions={bulkActions}
                     onSelectionChange={(selected) => console.log('Selected:', selected)}
+                    onRowDoubleClick={handleViewDetail}
                 />
             </div>
 
@@ -321,7 +301,7 @@ export default function AgentActivities() {
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <TypeBadge type={selectedActivity.type} />
-                            <StatusBadge status={selectedActivity.status} />
+                            {selectedActivity.surveyStatus && <SurveyStatusBadge status={selectedActivity.surveyStatus} />}
                         </div>
 
                         <div className={`p-4 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
@@ -381,23 +361,33 @@ export default function AgentActivities() {
                                 </div>
                             )}
 
-                            {selectedActivity.hasPhoto && (
+                            {selectedActivity.ipAddress && selectedActivity.ipAddress !== '-' && (
                                 <div className="flex items-start gap-3">
                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
                                         ${isDark ? 'bg-emerald-500/10' : 'bg-gray-100'}
                                     `}>
-                                        <Camera className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
+                                        <FileText className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-gray-600'}`} />
                                     </div>
                                     <div>
-                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Foto</p>
-                                        <div className={`mt-2 w-full h-32 rounded-lg flex items-center justify-center
-                                            ${isDark ? 'bg-emerald-950/50' : 'bg-gray-200'}
-                                        `}>
-                                            <span className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                                [Foto Aktivitas]
-                                            </span>
-                                        </div>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>IP Address</p>
+                                        <p className={`text-sm font-mono ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>
+                                            {selectedActivity.ipAddress}
+                                        </p>
                                     </div>
+                                </div>
+                            )}
+
+                            {selectedActivity.surveyId && (
+                                <div className="pt-3">
+                                    <a
+                                        href={`/surveys?openSurvey=${selectedActivity.surveyId}`}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                                            ${isDark ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-teal-100 text-teal-700 hover:bg-teal-200'}
+                                        `}
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                        Lihat Data Survei
+                                    </a>
                                 </div>
                             )}
                         </div>
