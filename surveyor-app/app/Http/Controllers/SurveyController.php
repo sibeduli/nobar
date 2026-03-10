@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Survey;
 use App\Models\PicActivityLog;
+use App\Models\CapacityCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -57,11 +58,23 @@ class SurveyController extends Controller
             return $this->transformSurvey($survey);
         });
 
+        // Get capacity categories for dropdown
+        $capacityCategories = CapacityCategory::orderBy('sort_order')->get()->map(fn($cat) => [
+            'id' => $cat->id,
+            'code' => $cat->code,
+            'label' => $cat->label,
+            'minCapacity' => $cat->min_capacity,
+            'maxCapacity' => $cat->max_capacity,
+            'price' => $cat->price,
+            'formattedPrice' => $cat->formatted_price,
+        ]);
+
         return Inertia::render('Surveys/Index', [
             'surveys' => $surveys,
             'stats' => $stats,
             'violationStats' => $violationStats,
             'leadStats' => $leadStats,
+            'capacityCategories' => $capacityCategories,
         ]);
     }
 
@@ -149,38 +162,59 @@ class SurveyController extends Controller
             'venue_contact' => 'nullable|string|max:255',
             'venue_phone' => 'nullable|string|max:50',
             'category' => 'nullable|in:commercial,non_commercial',
-            'capacity_limit' => 'nullable|integer|min:1',
+            'capacity_category_id' => 'nullable|integer|exists:capacity_categories,id',
+            'actual_visitors_category_id' => 'nullable|integer|exists:capacity_categories,id',
             'description' => 'nullable|string|max:2000',
         ]);
 
         $pic = Auth::guard('pic')->user();
 
+        // Get capacity limit from category if provided
+        $capacityLimit = null;
+        if (!empty($validated['capacity_category_id'])) {
+            $capacityCategory = CapacityCategory::find($validated['capacity_category_id']);
+            $capacityLimit = $capacityCategory?->max_capacity;
+        }
+
+        // Update actual_visitors_category_id if provided (PIC can correct this)
+        $actualVisitorsCategoryId = $validated['actual_visitors_category_id'] ?? null;
+
         $updateData = [
             'pic_venue_contact' => $validated['venue_contact'] ?? null,
             'pic_venue_phone' => $validated['venue_phone'] ?? null,
             'pic_category' => $validated['category'] ?? null,
-            'pic_capacity_limit' => $validated['capacity_limit'] ?? null,
+            'pic_capacity_limit' => $capacityLimit,
+            'pic_capacity_category_id' => $validated['capacity_category_id'] ?? null,
             'pic_description' => $validated['description'] ?? null,
             'pic_edited_by' => $pic->id,
             'pic_edited_at' => now(),
         ];
 
+        // PIC can update actual visitors category directly (not a PIC version, just correction)
+        if ($actualVisitorsCategoryId) {
+            $updateData['actual_visitors_category_id'] = $actualVisitorsCategoryId;
+        }
+
         $violationResolved = false;
         $violationReactivated = false;
 
-        // Handle capacity violations
+        // Handle capacity violations - compare category IDs (higher ID = higher capacity range)
         if ($survey->report_type === 'violation_capacity') {
-            $newCapacity = $validated['capacity_limit'] ?? $survey->capacity_limit;
-            $actualVisitors = $survey->actual_visitors ?? 0;
+            $newCapacityCategoryId = $validated['capacity_category_id'] ?? $survey->capacity_category_id;
+            $newActualVisitorsCategoryId = $actualVisitorsCategoryId ?? $survey->actual_visitors_category_id;
             
-            if ($survey->status === 'pending' && $newCapacity >= $actualVisitors) {
-                // Pending -> Resolved (new capacity fixes it)
+            // Violation if actual visitors category > capacity category
+            $isStillViolation = $newActualVisitorsCategoryId && $newCapacityCategoryId && 
+                                $newActualVisitorsCategoryId > $newCapacityCategoryId;
+            
+            if ($survey->status === 'pending' && !$isStillViolation) {
+                // Pending -> Resolved (capacity now covers visitors)
                 $updateData['status'] = 'approved';
                 $updateData['reviewed_at'] = now();
                 $updateData['reviewed_by'] = $pic->name;
                 $violationResolved = true;
-            } elseif ($survey->status === 'approved' && $newCapacity < $actualVisitors) {
-                // Resolved -> Pending (new capacity makes it violate again)
+            } elseif ($survey->status === 'approved' && $isStillViolation) {
+                // Resolved -> Pending (still a violation)
                 $updateData['status'] = 'pending';
                 $updateData['reviewed_at'] = null;
                 $updateData['reviewed_by'] = null;
@@ -385,7 +419,11 @@ class SurveyController extends Controller
             'venue_contact' => $survey->venue_contact,
             'venue_phone' => $survey->venue_phone,
             'actual_visitors' => $survey->actual_visitors,
+            'actual_visitors_category_id' => $survey->actual_visitors_category_id,
+            'actual_visitors_category_label' => $survey->actualVisitorsCategory?->label,
             'capacity_limit' => $survey->capacity_limit,
+            'capacity_category_id' => $survey->capacity_category_id,
+            'capacity_category_label' => $survey->capacityCategory?->label,
             'description' => $survey->description,
             'photos' => $survey->photos ?? [],
             'latitude' => $survey->latitude,
@@ -406,6 +444,8 @@ class SurveyController extends Controller
             'pic_venue_phone' => $survey->pic_venue_phone,
             'pic_category' => $survey->pic_category,
             'pic_capacity_limit' => $survey->pic_capacity_limit,
+            'pic_capacity_category_id' => $survey->pic_capacity_category_id,
+            'pic_capacity_category_label' => $survey->picCapacityCategory?->label,
             'pic_description' => $survey->pic_description,
             'pic_edited_at' => $survey->pic_edited_at?->format('Y-m-d H:i'),
             'pic_edited_by' => $survey->picEditor?->name,

@@ -18,7 +18,9 @@ class Survey extends Model
         'venue_contact',
         'venue_phone',
         'actual_visitors',
+        'actual_visitors_category_id',
         'capacity_limit',
+        'capacity_category_id',
         'description',
         'photos',
         'latitude',
@@ -32,6 +34,7 @@ class Survey extends Model
         'pic_venue_phone',
         'pic_category',
         'pic_capacity_limit',
+        'pic_capacity_category_id',
         'pic_description',
         'pic_edited_by',
         'pic_edited_at',
@@ -53,6 +56,21 @@ class Survey extends Model
     public function picEditor(): BelongsTo
     {
         return $this->belongsTo(Pic::class, 'pic_edited_by');
+    }
+
+    public function capacityCategory(): BelongsTo
+    {
+        return $this->belongsTo(CapacityCategory::class);
+    }
+
+    public function picCapacityCategory(): BelongsTo
+    {
+        return $this->belongsTo(CapacityCategory::class, 'pic_capacity_category_id');
+    }
+
+    public function actualVisitorsCategory(): BelongsTo
+    {
+        return $this->belongsTo(CapacityCategory::class, 'actual_visitors_category_id');
     }
 
     /**
@@ -84,6 +102,19 @@ class Survey extends Model
     public function getEffectiveCapacity(): ?int
     {
         return $this->pic_capacity_limit ?? $this->capacity_limit;
+    }
+
+    public function getEffectiveCapacityCategory(): ?CapacityCategory
+    {
+        if ($this->pic_capacity_category_id) {
+            return $this->picCapacityCategory;
+        }
+        return $this->capacityCategory;
+    }
+
+    public function getEffectiveCapacityCategoryId(): ?int
+    {
+        return $this->pic_capacity_category_id ?? $this->capacity_category_id;
     }
 
     public function getEffectiveDescription(): ?string

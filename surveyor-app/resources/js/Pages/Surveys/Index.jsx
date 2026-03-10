@@ -57,7 +57,7 @@ const categoryConfig = {
     non_commercial: { label: 'Non-Komersial', color: 'blue' },
 };
 
-export default function SurveysIndex({ surveys = [], stats = {}, violationStats = {}, leadStats = {} }) {
+export default function SurveysIndex({ surveys = [], stats = {}, violationStats = {}, leadStats = {}, capacityCategories = [] }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
@@ -86,7 +86,8 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
         venue_contact: '',
         venue_phone: '',
         category: '',
-        capacity_limit: '',
+        capacity_category_id: '',
+        actual_visitors_category_id: '',
         description: '',
     });
     const [isEditing, setIsEditing] = useState(false);
@@ -178,7 +179,8 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
             venue_contact: survey.pic_venue_contact || survey.venue_contact || '',
             venue_phone: survey.pic_venue_phone || survey.venue_phone || '',
             category: survey.pic_category || survey.category || '',
-            capacity_limit: survey.pic_capacity_limit || survey.capacity_limit || '',
+            capacity_category_id: survey.pic_capacity_category_id || survey.capacity_category_id || '',
+            actual_visitors_category_id: survey.actual_visitors_category_id || '',
             description: survey.pic_description || survey.description || '',
         });
         setShowEditModal(true);
@@ -187,7 +189,9 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
     const handleSaveEdit = () => {
         if (!selectedSurvey) return;
         
-        const newCapacity = parseInt(editForm.capacity_limit) || selectedSurvey.capacity_limit || 0;
+        // Get capacity from selected category
+        const selectedCategory = capacityCategories.find(c => c.id === parseInt(editForm.capacity_category_id));
+        const newCapacity = selectedCategory?.maxCapacity || selectedSurvey.capacity_limit || 0;
         const actualVisitors = selectedSurvey.actual_visitors || 0;
 
         // Handle capacity violations
@@ -590,16 +594,16 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
             render: (value) => <ViolationBadge type={value} />
         },
         {
-            key: 'actual_visitors',
+            key: 'actual_visitors_category_label',
             label: 'Detail',
             render: (value, row) => (
                 <div>
                     {row.report_type === 'violation_capacity' && value ? (
                         <>
                             <span className={`font-medium ${isDark ? 'text-red-400' : 'text-red-600'}`}>{value} orang</span>
-                            {(row.effective_capacity || row.capacity_limit) && (
+                            {(row.pic_capacity_category_label || row.capacity_category_label) && (
                                 <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                    Kapasitas: {row.effective_capacity || row.capacity_limit} orang
+                                    Kapasitas: {row.pic_capacity_category_label || row.capacity_category_label} orang
                                 </div>
                             )}
                         </>
@@ -994,7 +998,7 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
                             <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Pengunjung / Kapasitas</p>
                                 <p className={`text-lg font-bold ${isDark ? 'text-emerald-400' : 'text-teal-600'}`}>
-                                    {selectedSurvey.actual_visitors || '-'} / {selectedSurvey.effective_capacity || '-'}
+                                    {selectedSurvey.actual_visitors_category_label || '-'} / {selectedSurvey.pic_capacity_category_label || selectedSurvey.capacity_category_label || '-'}
                                 </p>
                             </div>
                         </div>
@@ -1183,17 +1187,43 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
                             </div>
 
                             <div>
-                                <FormInput
-                                    label="Kapasitas"
-                                    name="capacity_limit"
-                                    type="number"
-                                    value={editForm.capacity_limit}
-                                    onChange={(e) => setEditForm({ ...editForm, capacity_limit: e.target.value })}
-                                    placeholder="Kapasitas venue"
+                                <FormSelect
+                                    label="Kategori Kapasitas"
+                                    name="capacity_category_id"
+                                    value={editForm.capacity_category_id}
+                                    onChange={(e) => setEditForm({ ...editForm, capacity_category_id: e.target.value })}
+                                    options={[
+                                        { value: '', label: 'Pilih Kategori Kapasitas' },
+                                        ...capacityCategories.map(cat => ({
+                                            value: cat.id,
+                                            label: `${cat.code} (${cat.label}) - ${cat.formattedPrice}`
+                                        }))
+                                    ]}
                                 />
-                                {selectedSurvey.capacity_limit && selectedSurvey.pic_capacity_limit && (
+                                {selectedSurvey.capacity_category_id && selectedSurvey.pic_capacity_category_id && (
                                     <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
-                                        Asli: {selectedSurvey.capacity_limit}
+                                        Asli: {capacityCategories.find(c => c.id === selectedSurvey.capacity_category_id)?.label || '-'}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <FormSelect
+                                    label="Jumlah Pengunjung"
+                                    name="actual_visitors_category_id"
+                                    value={editForm.actual_visitors_category_id}
+                                    onChange={(e) => setEditForm({ ...editForm, actual_visitors_category_id: e.target.value })}
+                                    options={[
+                                        { value: '', label: 'Pilih Rentang Pengunjung' },
+                                        ...capacityCategories.map(cat => ({
+                                            value: cat.id,
+                                            label: `${cat.label} orang`
+                                        }))
+                                    ]}
+                                />
+                                {selectedSurvey.actual_visitors_category_id && (
+                                    <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                        Asli: {capacityCategories.find(c => c.id === selectedSurvey.actual_visitors_category_id)?.label || '-'} orang
                                     </p>
                                 )}
                             </div>

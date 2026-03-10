@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Survey;
 use App\Models\License;
 use App\Models\Merchant;
+use App\Models\CapacityCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +18,19 @@ class AgentSurveyController extends Controller
      */
     public function index()
     {
-        return Inertia::render('Agent/Report/Index');
+        $capacityCategories = CapacityCategory::orderBy('sort_order')->get()->map(fn($cat) => [
+            'id' => $cat->id,
+            'code' => $cat->code,
+            'label' => $cat->label,
+            'minCapacity' => $cat->min_capacity,
+            'maxCapacity' => $cat->max_capacity,
+            'price' => $cat->price,
+            'formattedPrice' => $cat->formatted_price,
+        ]);
+
+        return Inertia::render('Agent/Report/Index', [
+            'capacityCategories' => $capacityCategories,
+        ]);
     }
 
     /**
@@ -97,8 +110,8 @@ class AgentSurveyController extends Controller
             'venue_address' => 'nullable|string|max:500',
             'venue_contact' => 'nullable|string|max:255',
             'venue_phone' => 'nullable|string|max:20',
-            'actual_visitors' => 'nullable|integer|min:0',
-            'capacity_limit' => 'nullable|integer|min:0',
+            'actual_visitors_category_id' => 'nullable|integer|exists:capacity_categories,id',
+            'capacity_category_id' => 'nullable|integer|exists:capacity_categories,id',
             'description' => 'nullable|string|max:2000',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -120,6 +133,13 @@ class AgentSurveyController extends Controller
             }
         }
 
+        // Get capacity limit from category if provided
+        $capacityLimit = null;
+        if (!empty($validated['capacity_category_id'])) {
+            $capacityCategory = CapacityCategory::find($validated['capacity_category_id']);
+            $capacityLimit = $capacityCategory?->max_capacity;
+        }
+
         // Create survey
         $survey = Survey::create([
             'agent_id' => $agent->id,
@@ -131,8 +151,9 @@ class AgentSurveyController extends Controller
             'venue_address' => $validated['venue_address'] ?? null,
             'venue_contact' => $validated['venue_contact'] ?? null,
             'venue_phone' => $validated['venue_phone'] ?? null,
-            'actual_visitors' => $validated['actual_visitors'] ?? null,
-            'capacity_limit' => $validated['capacity_limit'] ?? null,
+            'actual_visitors_category_id' => $validated['actual_visitors_category_id'] ?? null,
+            'capacity_limit' => $capacityLimit,
+            'capacity_category_id' => $validated['capacity_category_id'] ?? null,
             'description' => $validated['description'] ?? null,
             'photos' => $photoUrls,
             'latitude' => $validated['latitude'] ?? null,

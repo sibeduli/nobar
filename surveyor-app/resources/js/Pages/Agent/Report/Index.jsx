@@ -34,7 +34,7 @@ const REPORT_TYPES = {
     other: { label: 'Lainnya', color: 'gray', icon: HelpCircle },
 };
 
-export default function AgentReport() {
+export default function AgentReport({ capacityCategories = [] }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
@@ -51,7 +51,7 @@ export default function AgentReport() {
     const [formData, setFormData] = useState({
         actualQuota: '',
         merchantName: '',
-        estimatedQuota: '',
+        capacityCategoryId: '',
         description: '',
     });
     const [photos, setPhotos] = useState([]);
@@ -86,7 +86,7 @@ export default function AgentReport() {
         setStep('start');
         setVenueData(null);
         setReportType(null);
-        setFormData({ actualQuota: '', merchantName: '', estimatedQuota: '', description: '' });
+        setFormData({ actualQuota: '', merchantName: '', capacityCategoryId: '', description: '' });
         setPhotos([]);
         setLocation(null);
     };
@@ -107,6 +107,9 @@ export default function AgentReport() {
             // Prepare photo data (base64)
             const photoData = photos.map(p => p.preview);
 
+            // actualQuota now contains the selected category ID for actual visitors range
+            const actualVisitorsCategoryId = formData.actualQuota ? parseInt(formData.actualQuota) : null;
+            
             const response = await axios.post('/agent/report/submit', {
                 report_type: reportType,
                 license_id: venueData?.licenseId || null,
@@ -115,8 +118,8 @@ export default function AgentReport() {
                 venue_address: venueData?.address || null,
                 venue_contact: venueData?.contactPerson || null,
                 venue_phone: venueData?.phone || null,
-                actual_visitors: formData.actualQuota ? parseInt(formData.actualQuota) : null,
-                capacity_limit: venueData?.capacityLimit || (formData.estimatedQuota ? parseInt(formData.estimatedQuota) : null),
+                actual_visitors_category_id: actualVisitorsCategoryId,
+                capacity_category_id: venueData?.capacityCategoryId || (formData.capacityCategoryId ? parseInt(formData.capacityCategoryId) : null),
                 description: formData.description || null,
                 latitude: location?.lat || null,
                 longitude: location?.lng || null,
@@ -163,7 +166,8 @@ export default function AgentReport() {
                     name: 'Warkop Bola Mania',
                     address: 'Jl. Sudirman No. 45, Jakarta Selatan',
                     type: 'commercial',
-                    capacityLimit: 50,
+                    capacityCategoryId: 1, // CAT1: 0-50
+                    capacityCategory: '0-50',
                     contactPerson: 'Pak Joko',
                     phone: '08123456789',
                     licensePurchaseDate: '2026-01-15',
@@ -178,7 +182,8 @@ export default function AgentReport() {
                     name: 'RT 05 RW 02 Kelurahan Menteng',
                     address: 'Balai Warga RT 05, Menteng, Jakarta Pusat',
                     type: 'non_commercial',
-                    capacityLimit: null,
+                    capacityCategoryId: null,
+                    capacityCategory: null,
                     contactPerson: 'Pak RT Budi',
                     phone: '08111222333',
                     licensePurchaseDate: '2026-02-10',
@@ -194,7 +199,8 @@ export default function AgentReport() {
                     name: 'Resto Piala Dunia',
                     address: 'Jl. Gatot Subroto No. 12, Jakarta Barat',
                     type: 'commercial',
-                    capacityLimit: 100,
+                    capacityCategoryId: 2, // CAT2: 50-100
+                    capacityCategory: '50-100',
                     contactPerson: 'Bu Siti',
                     phone: '08198765432',
                     licensePurchaseDate: '2026-02-01',
@@ -531,7 +537,7 @@ export default function AgentReport() {
                         <h2 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{venueData?.name}</h2>
                         <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-600'}`}>{venueData?.address}</p>
                         <div className={`mt-3 pt-3 border-t ${isDark ? 'border-emerald-500/20' : 'border-emerald-200'} grid grid-cols-2 gap-3 text-sm`}>
-                            <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Kapasitas:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.capacityLimit} orang</span></div>
+                            <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Kapasitas:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.capacityCategory} orang</span></div>
                             <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Kontak:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.contactPerson}</span></div>
                             <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Telepon:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.phone}</span></div>
                             <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Lisensi:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{new Date(venueData?.licensePurchaseDate).toLocaleDateString('id-ID')}</span></div>
@@ -590,29 +596,40 @@ export default function AgentReport() {
                         </div>
                     )}
 
-                    {/* Quota Check */}
+                    {/* Quota Check - Using Category Range */}
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
                         <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                            Berapa jumlah pengunjung saat ini? <span className="text-red-500">*</span>
+                            Estimasi jumlah pengunjung saat ini? <span className="text-red-500">*</span>
                         </label>
-                        <div className="relative">
-                            <Users className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`} />
-                            <input
-                                type="number"
-                                value={formData.actualQuota}
-                                onChange={(e) => setFormData(p => ({ ...p, actualQuota: e.target.value }))}
-                                placeholder="Masukkan jumlah"
-                                className={`w-full pl-11 pr-4 py-3 rounded-xl text-sm ${isDark ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100' : 'bg-gray-50 border border-gray-200 text-gray-900'}`}
-                            />
-                        </div>
-                        <p className={`text-xs mt-2 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Batas kapasitas: {venueData?.capacityLimit} orang</p>
+                        <select
+                            value={formData.actualQuota}
+                            onChange={(e) => setFormData(p => ({ ...p, actualQuota: e.target.value }))}
+                            className={`w-full px-4 py-3 rounded-xl text-sm ${isDark ? 'bg-[#0d1414] border border-emerald-900/50 text-emerald-100' : 'bg-gray-50 border border-gray-200 text-gray-900'}`}
+                        >
+                            <option value="" className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>Pilih Rentang Pengunjung</option>
+                            {capacityCategories.map(cat => (
+                                <option key={cat.id} value={cat.id} className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>
+                                    {cat.label} orang
+                                </option>
+                            ))}
+                        </select>
+                        <p className={`text-xs mt-2 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                            Kapasitas lisensi: {venueData?.capacityCategory || venueData?.capacityLimit} orang
+                        </p>
                     </div>
 
                     <button
                         onClick={() => {
-                            const actual = parseInt(formData.actualQuota);
-                            if (!actual) { toast.error('Masukkan jumlah pengunjung'); return; }
-                            if (actual > venueData?.capacityLimit) {
+                            if (!formData.actualQuota) { toast.error('Pilih rentang pengunjung'); return; }
+                            const selectedCategory = capacityCategories.find(c => c.id === parseInt(formData.actualQuota));
+                            const venueCategory = capacityCategories.find(c => c.id === venueData?.capacityCategoryId);
+                            
+                            // Compare categories - violation if selected visitor category is higher than venue capacity category
+                            // e.g., visitors 50-100 (CAT2) vs capacity 0-50 (CAT1) = violation
+                            // Compare by sort_order or id (higher id = higher capacity range)
+                            const isViolation = selectedCategory && venueCategory && selectedCategory.id > venueCategory.id;
+                            
+                            if (isViolation) {
                                 setReportType('violation_capacity');
                                 setStep('form');
                             } else {
@@ -868,9 +885,19 @@ export default function AgentReport() {
                                 className={`w-full px-4 py-3 rounded-xl text-sm ${isDark ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100' : 'bg-gray-50 border border-gray-200'}`} />
                         </div>
                         <div>
-                            <label className={`block text-sm mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>Estimasi Kapasitas</label>
-                            <input type="number" value={formData.estimatedQuota} onChange={(e) => setFormData(p => ({ ...p, estimatedQuota: e.target.value }))} placeholder="Perkiraan kapasitas"
-                                className={`w-full px-4 py-3 rounded-xl text-sm ${isDark ? 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100' : 'bg-gray-50 border border-gray-200'}`} />
+                            <label className={`block text-sm mb-2 ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>Kategori Kapasitas</label>
+                            <select 
+                                value={formData.capacityCategoryId} 
+                                onChange={(e) => setFormData(p => ({ ...p, capacityCategoryId: e.target.value }))}
+                                className={`w-full px-4 py-3 rounded-xl text-sm ${isDark ? 'bg-[#0d1414] border border-emerald-900/50 text-emerald-100' : 'bg-gray-50 border border-gray-200 text-gray-900'}`}
+                            >
+                                <option value="" className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>Pilih Kategori Kapasitas</option>
+                                {capacityCategories.map(cat => (
+                                    <option key={cat.id} value={cat.id} className={isDark ? 'bg-[#0d1414] text-emerald-100' : ''}>
+                                        {cat.code} ({cat.label}) - {cat.formattedPrice}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                 )}
