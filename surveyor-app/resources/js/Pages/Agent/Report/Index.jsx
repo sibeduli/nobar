@@ -58,6 +58,7 @@ export default function AgentReport() {
     const [location, setLocation] = useState(null);
     const [isGettingLocation, setIsGettingLocation] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showVenueMismatchConfirm, setShowVenueMismatchConfirm] = useState(false);
 
     // Handlers
     const handlePhotoCapture = (e) => {
@@ -535,7 +536,59 @@ export default function AgentReport() {
                             <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Telepon:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.phone}</span></div>
                             <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Lisensi:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{new Date(venueData?.licensePurchaseDate).toLocaleDateString('id-ID')}</span></div>
                         </div>
+                        
+                        {/* Venue Mismatch Button */}
+                        <button
+                            onClick={() => setShowVenueMismatchConfirm(true)}
+                            className={`w-full mt-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 ${isDark ? 'bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20' : 'bg-red-50 border border-red-200 text-red-600 hover:bg-red-100'}`}
+                        >
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            Klik Disini jika Venue/Alamat Tidak Sesuai
+                        </button>
                     </div>
+
+                    {/* Venue Mismatch Confirmation Modal */}
+                    {showVenueMismatchConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+                            <div className={`w-full max-w-sm rounded-2xl p-5 ${isDark ? 'bg-[#0a0f0f] border border-emerald-900/50' : 'bg-white'}`}>
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className={`p-2 rounded-full ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                                        <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                                    </div>
+                                    <h3 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Konfirmasi Pelanggaran</h3>
+                                </div>
+                                
+                                <p className={`text-sm mb-4 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>
+                                    Apakah Anda yakin venue/alamat ini <strong>tidak sesuai</strong> dengan data lisensi?
+                                </p>
+                                
+                                <div className={`p-3 rounded-lg mb-4 ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
+                                    <p className={`text-xs ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                                        ⚠️ Laporan pelanggaran akan dikirim ke PIC untuk ditindaklanjuti. Pastikan data sudah benar.
+                                    </p>
+                                </div>
+                                
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowVenueMismatchConfirm(false)}
+                                        className={`flex-1 py-2.5 rounded-xl font-medium ${isDark ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50' : 'bg-gray-100 text-gray-700'}`}
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setShowVenueMismatchConfirm(false);
+                                            setReportType('violation_venue');
+                                            setStep('form');
+                                        }}
+                                        className={`flex-1 py-2.5 rounded-xl font-medium ${isDark ? 'bg-red-500 text-white' : 'bg-red-600 text-white'}`}
+                                    >
+                                        Ya, Laporkan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Quota Check */}
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
@@ -743,8 +796,8 @@ export default function AgentReport() {
 
     // Determine back step based on report type
     const getFormBackStep = () => {
-        if (reportType === 'verified' || reportType === 'violation_ads' || reportType === 'violation_venue' || reportType === 'other') return 'qr_valid_ads';
-        if (reportType === 'violation_capacity') return 'qr_valid_commercial';
+        if (reportType === 'verified' || reportType === 'violation_ads' || reportType === 'other') return 'qr_valid_ads';
+        if (reportType === 'violation_capacity' || reportType === 'violation_venue') return 'qr_valid_commercial';
         if (reportType === 'verified_non_commercial') return 'qr_valid_non_commercial';
         if (reportType === 'violation_invalid_qr') return 'qr_invalid';
         if (reportType === 'violation_no_license' || reportType === 'lead') return 'no_qr_commercial';
