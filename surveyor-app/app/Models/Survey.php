@@ -27,6 +27,14 @@ class Survey extends Model
         'admin_notes',
         'reviewed_at',
         'reviewed_by',
+        // PIC edits
+        'pic_venue_contact',
+        'pic_venue_phone',
+        'pic_category',
+        'pic_capacity_limit',
+        'pic_description',
+        'pic_edited_by',
+        'pic_edited_at',
     ];
 
     protected $casts = [
@@ -34,11 +42,53 @@ class Survey extends Model
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
         'reviewed_at' => 'datetime',
+        'pic_edited_at' => 'datetime',
     ];
 
     public function agent(): BelongsTo
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function picEditor(): BelongsTo
+    {
+        return $this->belongsTo(Pic::class, 'pic_edited_by');
+    }
+
+    /**
+     * Check if PIC has edited this survey
+     */
+    public function hasPicEdits(): bool
+    {
+        return $this->pic_edited_at !== null;
+    }
+
+    /**
+     * Get effective value (PIC version if exists, otherwise agent version)
+     */
+    public function getEffectiveContact(): ?string
+    {
+        return $this->pic_venue_contact ?? $this->venue_contact;
+    }
+
+    public function getEffectivePhone(): ?string
+    {
+        return $this->pic_venue_phone ?? $this->venue_phone;
+    }
+
+    public function getEffectiveCategory(): ?string
+    {
+        return $this->pic_category ?? $this->category;
+    }
+
+    public function getEffectiveCapacity(): ?int
+    {
+        return $this->pic_capacity_limit ?? $this->capacity_limit;
+    }
+
+    public function getEffectiveDescription(): ?string
+    {
+        return $this->pic_description ?? $this->description;
     }
 
     /**

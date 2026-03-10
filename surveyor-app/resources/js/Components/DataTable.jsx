@@ -29,6 +29,7 @@ export default function DataTable({
     bulkActions = [],
     emptyMessage = 'Tidak ada data',
     loading = false,
+    onRowDoubleClick,
 }) {
     const { theme } = useTheme();
     const isDark = theme === 'dark';
@@ -568,7 +569,10 @@ export default function DataTable({
                                         key={rowIndex}
                                         className={`transition-colors
                                             ${isDark ? 'hover:bg-emerald-500/5' : 'hover:bg-gray-50'}
+                                            ${onRowDoubleClick ? 'cursor-pointer' : ''}
                                         `}
+                                        onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
+                                        title={onRowDoubleClick ? 'Klik 2x untuk melihat info' : undefined}
                                     >
                                         {selectable && (
                                             <td className="w-12 px-4 py-3">

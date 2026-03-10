@@ -3,63 +3,35 @@ import AgentLayout from '@/Layouts/AgentLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import { router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     QrCode, X, Camera, MapPin, Store, Users, Check, Loader2, Navigation,
     ShieldCheck, ShieldX, AlertTriangle, ArrowLeft, Scan, FileText, Image,
     ChevronRight, Ban, Megaphone, HelpCircle,
 } from 'lucide-react';
 
-// Mock QR validation
-const mockValidateQR = (qrData) => {
-    if (qrData === 'VALID_HANDLED') {
-        return {
-            valid: true,
-            alreadyHandled: true,
-            handledDate: '2026-02-25',
-            venue: {
-                id: 2,
-                name: 'Resto Piala Dunia',
-                address: 'Jl. Gatot Subroto No. 12, Jakarta Barat',
-                capacityLimit: 100,
-                contactPerson: 'Bu Siti',
-                phone: '08198765432',
-                licensePurchaseDate: '2026-02-01',
-                licenseId: 'LIC-2026-002',
-            }
-        };
-    }
-    if (qrData?.startsWith('VALID_')) {
-        return {
-            valid: true,
-            alreadyHandled: false,
-            venue: {
-                id: 1,
-                name: 'Warkop Bola Mania',
-                address: 'Jl. Sudirman No. 45, Jakarta Selatan',
-                capacityLimit: 50,
-                contactPerson: 'Pak Joko',
-                phone: '08123456789',
-                licensePurchaseDate: '2026-01-15',
-                licenseId: 'LIC-2026-001',
-            }
-        };
-    }
-    return { valid: false };
+// Demo QR codes for testing (will be replaced by real scanner)
+const DEMO_QR_CODES = {
+    valid: 'DEMO_COMMERCIAL_001',
+    valid_nc: 'DEMO_NON_COMMERCIAL_001',
+    invalid: 'INVALID_QR_CODE',
+    handled: 'DEMO_HANDLED_001',
 };
 
 const REPORT_TYPES = {
-    // Commercial
-    approved: { label: 'Disetujui', color: 'emerald', icon: Check },
-    offering: { label: 'Penawaran', color: 'blue', icon: FileText },
+    // Verified (from QR scan)
+    verified: { label: 'Terverifikasi', color: 'emerald', icon: ShieldCheck },
+    verified_non_commercial: { label: 'Terverifikasi (Non-Komersial)', color: 'emerald', icon: ShieldCheck },
+    // Violations (commercial only)
     violation_invalid_qr: { label: 'Pelanggaran - QR Invalid', color: 'red', icon: ShieldX },
-    violation_quota: { label: 'Pelanggaran - Melebihi Kapasitas', color: 'red', icon: Users },
+    violation_capacity: { label: 'Pelanggaran - Melebihi Kapasitas', color: 'red', icon: Users },
     violation_ads: { label: 'Pelanggaran - Iklan Ilegal', color: 'red', icon: Megaphone },
     violation_no_license: { label: 'Pelanggaran - Tanpa Lisensi', color: 'red', icon: Ban },
-    violation_invalid_venue: { label: 'Pelanggaran - Venue Invalid', color: 'red', icon: Store },
+    violation_venue: { label: 'Pelanggaran - Venue Tidak Sesuai', color: 'red', icon: Store },
+    // No QR paths
+    lead: { label: 'Penawaran Lisensi', color: 'blue', icon: FileText },
+    documentation: { label: 'Dokumentasi Non-Komersial', color: 'blue', icon: FileText },
     other: { label: 'Lainnya', color: 'gray', icon: HelpCircle },
-    // Non-Commercial
-    non_commercial_planning: { label: 'Non-Komersial - Rencana Nobar', color: 'blue', icon: FileText },
-    non_commercial_active: { label: 'Non-Komersial - Nobar Aktif', color: 'blue', icon: Users },
 };
 
 export default function AgentReport() {
@@ -68,10 +40,10 @@ export default function AgentReport() {
     const isDark = theme === 'dark';
     const fileInputRef = useRef(null);
 
-    // Flow state
-    const [step, setStep] = useState('start'); // start, commercial_check, scan, qr_valid, qr_invalid, no_qr_check, non_commercial, form
-    const [isCommercial, setIsCommercial] = useState(null);
-    const [hasQR, setHasQR] = useState(null);
+    // Flow state - New flow: QR first, then commercial/non-commercial if no QR
+    // Steps: start -> scan -> (qr_valid_commercial | qr_valid_non_commercial | qr_invalid | already_handled)
+    //        start -> no_qr -> no_qr_type -> (no_qr_commercial | no_qr_non_commercial) -> form
+    const [step, setStep] = useState('start');
     const [venueData, setVenueData] = useState(null);
     const [reportType, setReportType] = useState(null);
 
@@ -111,8 +83,6 @@ export default function AgentReport() {
 
     const resetFlow = () => {
         setStep('start');
-        setIsCommercial(null);
-        setHasQR(null);
         setVenueData(null);
         setReportType(null);
         setFormData({ actualQuota: '', merchantName: '', estimatedQuota: '', description: '' });
@@ -122,23 +92,128 @@ export default function AgentReport() {
 
     const handleSubmit = async () => {
         if (!reportType) { toast.error('Tipe laporan tidak valid'); return; }
+        
+        // Validate required fields for certain report types
+        const needsVenueInfo = !venueData && (reportType === 'violation_no_license' || reportType === 'lead' || reportType === 'documentation');
+        if (needsVenueInfo && !formData.merchantName) {
+            toast.error('Nama venue wajib diisi');
+            return;
+        }
+
         setIsSubmitting(true);
-        await new Promise(r => setTimeout(r, 2000));
-        setIsSubmitting(false);
-        toast.success('Laporan berhasil dikirim!');
-        router.visit('/agent/surveys');
+        
+        try {
+            // Prepare photo data (base64)
+            const photoData = photos.map(p => p.preview);
+
+            const response = await axios.post('/agent/report/submit', {
+                report_type: reportType,
+                license_id: venueData?.licenseId || null,
+                merchant_id: venueData?.id || null,
+                venue_name: venueData?.name || formData.merchantName || null,
+                venue_address: venueData?.address || null,
+                venue_contact: venueData?.contactPerson || null,
+                venue_phone: venueData?.phone || null,
+                actual_visitors: formData.actualQuota ? parseInt(formData.actualQuota) : null,
+                capacity_limit: venueData?.capacityLimit || (formData.estimatedQuota ? parseInt(formData.estimatedQuota) : null),
+                description: formData.description || null,
+                latitude: location?.lat || null,
+                longitude: location?.lng || null,
+                photos: photoData,
+            });
+
+            if (response.data.success) {
+                toast.success('Laporan berhasil dikirim!');
+                router.visit('/agent');
+            } else {
+                toast.error(response.data.message || 'Gagal mengirim laporan');
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            toast.error(error.response?.data?.message || 'Gagal mengirim laporan');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    // Simulate QR scan
-    const simulateScan = (type) => {
-        const qrMap = { valid: 'VALID_001', invalid: 'INVALID', handled: 'VALID_HANDLED' };
-        const result = mockValidateQR(qrMap[type]);
+    // Validate QR code via API
+    const validateQrCode = async (qrCode) => {
+        try {
+            const response = await axios.post('/agent/report/validate-qr', { qr_code: qrCode });
+            return response.data;
+        } catch (error) {
+            console.error('QR validation error:', error);
+            return { valid: false, message: 'Gagal memvalidasi QR' };
+        }
+    };
+
+    // Simulate QR scan - in production this would use camera scanner
+    const simulateScan = async (type) => {
+        const qrCode = DEMO_QR_CODES[type];
+        
+        // For demo, use mock data since we don't have real licenses yet
+        // In production, this would call validateQrCode(qrCode)
+        const mockResults = {
+            valid: {
+                valid: true,
+                alreadyHandled: false,
+                venue: {
+                    id: 'demo-1',
+                    name: 'Warkop Bola Mania',
+                    address: 'Jl. Sudirman No. 45, Jakarta Selatan',
+                    type: 'commercial',
+                    capacityLimit: 50,
+                    contactPerson: 'Pak Joko',
+                    phone: '08123456789',
+                    licensePurchaseDate: '2026-01-15',
+                    licenseId: 'LIC-DEMO-001',
+                }
+            },
+            valid_nc: {
+                valid: true,
+                alreadyHandled: false,
+                venue: {
+                    id: 'demo-2',
+                    name: 'RT 05 RW 02 Kelurahan Menteng',
+                    address: 'Balai Warga RT 05, Menteng, Jakarta Pusat',
+                    type: 'non_commercial',
+                    capacityLimit: null,
+                    contactPerson: 'Pak RT Budi',
+                    phone: '08111222333',
+                    licensePurchaseDate: '2026-02-10',
+                    licenseId: 'NC-DEMO-001',
+                }
+            },
+            handled: {
+                valid: true,
+                alreadyHandled: true,
+                handledDate: new Date().toISOString().split('T')[0],
+                venue: {
+                    id: 'demo-3',
+                    name: 'Resto Piala Dunia',
+                    address: 'Jl. Gatot Subroto No. 12, Jakarta Barat',
+                    type: 'commercial',
+                    capacityLimit: 100,
+                    contactPerson: 'Bu Siti',
+                    phone: '08198765432',
+                    licensePurchaseDate: '2026-02-01',
+                    licenseId: 'LIC-DEMO-002',
+                }
+            },
+            invalid: { valid: false }
+        };
+
+        const result = mockResults[type] || { valid: false };
+        
         if (result.valid) {
             setVenueData(result.venue);
             if (result.alreadyHandled) {
                 setStep('already_handled');
+            } else if (result.venue.type === 'non_commercial') {
+                setReportType('verified_non_commercial');
+                setStep('qr_valid_non_commercial');
             } else {
-                setStep('qr_valid');
+                setStep('qr_valid_commercial');
             }
         } else {
             setReportType('violation_invalid_qr');
@@ -146,82 +221,33 @@ export default function AgentReport() {
         }
     };
 
-    // ==================== STEP: START - Commercial or Non-Commercial ====================
+    // ==================== STEP: START - QR First ====================
     if (step === 'start') {
         return (
             <AgentLayout>
                 <div className="space-y-6 pt-4">
                     <div className="text-center">
                         <h1 className={`text-xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Laporan Baru</h1>
-                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Jenis nobar yang ditemukan?</p>
+                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Apakah venue memiliki QR Lisensi?</p>
                     </div>
 
                     <div className="space-y-3">
                         <button
-                            onClick={() => { setIsCommercial(true); setStep('commercial_check'); }}
-                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
-                        >
-                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
-                                <Store className={`w-7 h-7 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
-                            </div>
-                            <div className="flex-1 text-left">
-                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Komersial</p>
-                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Venue berbayar / bisnis</p>
-                            </div>
-                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
-                        </button>
-
-                        <button
-                            onClick={() => { setIsCommercial(false); setStep('non_commercial'); }}
-                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
-                        >
-                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
-                                <Users className={`w-7 h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                            </div>
-                            <div className="flex-1 text-left">
-                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial</p>
-                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Komunitas / pribadi / gratis</p>
-                            </div>
-                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
-                        </button>
-                    </div>
-                </div>
-            </AgentLayout>
-        );
-    }
-
-    // ==================== STEP: COMMERCIAL CHECK - QR or No QR ====================
-    if (step === 'commercial_check') {
-        return (
-            <AgentLayout>
-                <div className="space-y-6 pt-4">
-                    <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div>
-                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Komersial</h1>
-                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Apakah venue memiliki QR lisensi?</p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => { setHasQR(true); setStep('scan'); }}
+                            onClick={() => setStep('scan')}
                             className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
                         >
                             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
                                 <QrCode className={`w-7 h-7 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
                             </div>
                             <div className="flex-1 text-left">
-                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Ada QR</p>
-                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Scan QR lisensi venue</p>
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Ada QR Lisensi</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Scan QR untuk verifikasi</p>
                             </div>
                             <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
                         </button>
 
                         <button
-                            onClick={() => { setHasQR(false); setStep('no_qr_check'); }}
+                            onClick={() => setStep('no_qr_type')}
                             className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
                         >
                             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-amber-500/10' : 'bg-amber-50'}`}>
@@ -239,52 +265,101 @@ export default function AgentReport() {
         );
     }
 
-    // ==================== STEP: NON-COMMERCIAL - Planning or Active ====================
-    if (step === 'non_commercial') {
+    // ==================== STEP: NO QR - Ask Commercial or Non-Commercial ====================
+    if (step === 'no_qr_type') {
         return (
             <AgentLayout>
                 <div className="space-y-6 pt-4">
                     <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('start')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div>
-                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial</h1>
-                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Status nobar saat ini?</p>
+                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Jenis Venue</h1>
+                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Venue tanpa QR - jenis apa?</p>
                         </div>
-                    </div>
-
-                    <div className={`p-4 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
-                        <p className={`text-sm ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-                            Laporan ini hanya untuk dokumentasi, bukan pelanggaran.
-                        </p>
                     </div>
 
                     <div className="space-y-3">
                         <button
-                            onClick={() => { setReportType('non_commercial_planning'); setStep('form'); }}
+                            onClick={() => setStep('no_qr_commercial')}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-amber-500/10' : 'bg-amber-50'}`}>
+                                <Store className={`w-7 h-7 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Komersial</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Warkop, cafe, resto, dll (berbayar)</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+
+                        <button
+                            onClick={() => { setReportType('documentation'); setStep('form'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
+                                <Users className={`w-7 h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Komunitas, RT/RW, gratis</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
+                        </button>
+                    </div>
+
+                    <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                        <p className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                            💡 Non-komersial tanpa QR = dokumentasi saja, bukan pelanggaran
+                        </p>
+                    </div>
+                </div>
+            </AgentLayout>
+        );
+    }
+
+    // ==================== STEP: NO QR COMMERCIAL - Is Nobar Happening? ====================
+    if (step === 'no_qr_commercial') {
+        return (
+            <AgentLayout>
+                <div className="space-y-6 pt-4">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setStep('no_qr_type')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Komersial</h1>
+                            <p className={`text-xs ${isDark ? 'text-emerald-500/70' : 'text-gray-500'}`}>Apakah sedang ada nobar?</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => { setReportType('violation_no_license'); setStep('form'); }}
+                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-red-500/10 border border-red-500/30 hover:border-red-500/50' : 'bg-red-50 border border-red-200 hover:border-red-400'}`}
+                        >
+                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-red-500/20' : 'bg-red-100'}`}>
+                                <AlertTriangle className={`w-7 h-7 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <p className={`font-semibold ${isDark ? 'text-red-300' : 'text-red-700'}`}>Ya, Sedang Nobar</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-red-400/70' : 'text-red-600'}`}>⚠️ Pelanggaran - tanpa lisensi</p>
+                            </div>
+                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-red-500/40' : 'text-red-400'}`} />
+                        </button>
+
+                        <button
+                            onClick={() => { setReportType('lead'); setStep('form'); }}
                             className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
                         >
                             <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-blue-500/10' : 'bg-blue-50'}`}>
                                 <FileText className={`w-7 h-7 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
                             </div>
                             <div className="flex-1 text-left">
-                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Rencana Nobar</p>
-                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Akan mengadakan nobar</p>
-                            </div>
-                            <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
-                        </button>
-
-                        <button
-                            onClick={() => { setReportType('non_commercial_active'); setStep('form'); }}
-                            className={`w-full flex items-center gap-4 p-5 rounded-xl transition-colors ${isDark ? 'bg-[#0d1414] border border-emerald-900/30 hover:border-emerald-500/50' : 'bg-white border border-gray-200 hover:border-teal-400'}`}
-                        >
-                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${isDark ? 'bg-emerald-500/10' : 'bg-teal-50'}`}>
-                                <Users className={`w-7 h-7 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
-                            </div>
-                            <div className="flex-1 text-left">
-                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Nobar Aktif</p>
-                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Sedang berlangsung</p>
+                                <p className={`font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Tidak Ada Nobar</p>
+                                <p className={`text-xs mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Catat sebagai lead/penawaran</p>
                             </div>
                             <ChevronRight className={`w-5 h-5 ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`} />
                         </button>
@@ -300,7 +375,7 @@ export default function AgentReport() {
             <AgentLayout>
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('start')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Scan QR Lisensi</h1>
@@ -328,15 +403,18 @@ export default function AgentReport() {
                     {/* Demo buttons - in production this would be automatic */}
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
                         <p className={`text-xs text-center mb-3 ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>Demo: Pilih hasil scan</p>
-                        <div className="flex gap-2">
-                            <button onClick={() => simulateScan('valid')} className={`flex-1 py-2 rounded-lg text-xs font-medium ${isDark ? 'bg-emerald-500 text-white' : 'bg-emerald-600 text-white'}`}>
-                                Valid
+                        <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => simulateScan('valid')} className={`py-2.5 rounded-lg text-xs font-medium ${isDark ? 'bg-emerald-500 text-white' : 'bg-emerald-600 text-white'}`}>
+                                ✓ Komersial Valid
                             </button>
-                            <button onClick={() => simulateScan('handled')} className={`flex-1 py-2 rounded-lg text-xs font-medium ${isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'}`}>
-                                Ditangani
+                            <button onClick={() => simulateScan('valid_nc')} className={`py-2.5 rounded-lg text-xs font-medium ${isDark ? 'bg-teal-500 text-white' : 'bg-teal-600 text-white'}`}>
+                                ✓ Non-Komersial Valid
                             </button>
-                            <button onClick={() => simulateScan('invalid')} className={`flex-1 py-2 rounded-lg text-xs font-medium ${isDark ? 'bg-red-500 text-white' : 'bg-red-600 text-white'}`}>
-                                Invalid
+                            <button onClick={() => simulateScan('handled')} className={`py-2.5 rounded-lg text-xs font-medium ${isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                ↻ Sudah Ditangani
+                            </button>
+                            <button onClick={() => simulateScan('invalid')} className={`py-2.5 rounded-lg text-xs font-medium ${isDark ? 'bg-red-500 text-white' : 'bg-red-600 text-white'}`}>
+                                ✗ QR Invalid
                             </button>
                         </div>
                     </div>
@@ -355,7 +433,7 @@ export default function AgentReport() {
             <AgentLayout>
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('scan')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Sudah Ditangani</h1>
@@ -382,23 +460,72 @@ export default function AgentReport() {
         );
     }
 
-    // ==================== STEP: QR VALID - Check venue ====================
-    if (step === 'qr_valid') {
+    // ==================== STEP: QR VALID NON-COMMERCIAL - Auto verified ====================
+    if (step === 'qr_valid_non_commercial') {
         return (
             <AgentLayout>
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('scan')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
-                        <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Terverifikasi</h1>
+                        <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Non-Komersial Terverifikasi</h1>
+                    </div>
+
+                    {/* Success Card */}
+                    <div className={`p-6 rounded-xl text-center ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'}`}>
+                        <ShieldCheck className={`w-16 h-16 mx-auto mb-4 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                        <h2 className={`text-lg font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lisensi Valid ✓</h2>
+                        <p className={`text-sm mt-2 ${isDark ? 'text-emerald-400/70' : 'text-emerald-600'}`}>
+                            Venue non-komersial dengan lisensi valid
+                        </p>
+                    </div>
+
+                    {/* Venue Info Card */}
+                    <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                        <h2 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{venueData?.name}</h2>
+                        <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-600'}`}>{venueData?.address}</p>
+                        <div className={`mt-3 pt-3 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'} grid grid-cols-2 gap-3 text-sm`}>
+                            <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Kontak:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.contactPerson}</span></div>
+                            <div><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>Telepon:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.phone}</span></div>
+                            <div className="col-span-2"><span className={isDark ? 'text-emerald-500/60' : 'text-gray-500'}>ID Lisensi:</span> <span className={isDark ? 'text-emerald-100' : 'text-gray-900'}>{venueData?.licenseId}</span></div>
+                        </div>
+                    </div>
+
+                    <div className={`p-3 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                        <p className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
+                            💡 Non-komersial tidak memerlukan pemeriksaan kapasitas atau iklan
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => setStep('form')}
+                        className={`w-full py-3.5 rounded-xl font-medium ${isDark ? 'bg-emerald-500 text-white' : 'bg-teal-600 text-white'}`}
+                    >
+                        Lanjutkan ke Dokumentasi
+                    </button>
+                </div>
+            </AgentLayout>
+        );
+    }
+
+    // ==================== STEP: QR VALID COMMERCIAL - Check compliance ====================
+    if (step === 'qr_valid_commercial') {
+        return (
+            <AgentLayout>
+                <div className="space-y-6">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setStep('scan')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Komersial Terverifikasi</h1>
                     </div>
 
                     {/* Venue Info Card */}
                     <div className={`p-4 rounded-xl ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'}`}>
                         <div className="flex items-center gap-2 mb-3">
                             <ShieldCheck className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
-                            <span className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lisensi Valid</span>
+                            <span className={`text-sm font-medium ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>Lisensi Komersial Valid</span>
                         </div>
                         <h2 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{venueData?.name}</h2>
                         <p className={`text-sm mt-1 ${isDark ? 'text-emerald-500/70' : 'text-gray-600'}`}>{venueData?.address}</p>
@@ -433,7 +560,7 @@ export default function AgentReport() {
                             const actual = parseInt(formData.actualQuota);
                             if (!actual) { toast.error('Masukkan jumlah pengunjung'); return; }
                             if (actual > venueData?.capacityLimit) {
-                                setReportType('violation_quota');
+                                setReportType('violation_capacity');
                                 setStep('form');
                             } else {
                                 setStep('qr_valid_ads');
@@ -454,7 +581,7 @@ export default function AgentReport() {
             <AgentLayout>
                 <div className="space-y-6 pb-4">
                     <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('scan')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div>
@@ -540,13 +667,13 @@ export default function AgentReport() {
         );
     }
 
-    // ==================== STEP: QR VALID - Ads Check ====================
+    // ==================== STEP: QR VALID COMMERCIAL - Ads Check ====================
     if (step === 'qr_valid_ads') {
         return (
             <AgentLayout>
                 <div className="space-y-6">
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setStep('qr_valid')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                        <button onClick={() => setStep('qr_valid_commercial')} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Cek Iklan/Sponsor</h1>
@@ -571,7 +698,7 @@ export default function AgentReport() {
                         </button>
 
                         <button
-                            onClick={() => { setReportType('approved'); setStep('form'); }}
+                            onClick={() => { setReportType('verified'); setStep('form'); }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl ${isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200'}`}
                         >
                             <Check className={`w-6 h-6 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
@@ -582,12 +709,12 @@ export default function AgentReport() {
                         </button>
 
                         <button
-                            onClick={() => { setReportType('violation_invalid_venue'); setStep('form'); }}
+                            onClick={() => { setReportType('violation_venue'); setStep('form'); }}
                             className={`w-full flex items-center gap-4 p-4 rounded-xl ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}
                         >
                             <Store className={`w-6 h-6 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
                             <div className="flex-1 text-left">
-                                <p className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Tidak Valid</p>
+                                <p className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Venue Tidak Sesuai</p>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Tutup/tidak ada/alamat salah</p>
                             </div>
                         </button>
@@ -608,62 +735,28 @@ export default function AgentReport() {
         );
     }
 
-    // ==================== STEP: NO QR - Check if Nobar ====================
-    if (step === 'no_qr_check') {
-        return (
-            <AgentLayout>
-                <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                        <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <h1 className={`text-lg font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Cek Aktivitas Nobar</h1>
-                    </div>
-
-                    <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
-                        <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                            Apakah saat ini sedang ada kegiatan Nobar di venue ini?
-                        </p>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => { setReportType('violation_no_license'); setStep('form'); }}
-                            className={`w-full flex items-center gap-4 p-4 rounded-xl ${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}
-                        >
-                            <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-                            <div className="flex-1 text-left">
-                                <p className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Ya, Sedang Nobar</p>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Nobar tanpa lisensi = pelanggaran</p>
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => { setReportType('offering'); setStep('form'); }}
-                            className={`w-full flex items-center gap-4 p-4 rounded-xl ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}
-                        >
-                            <FileText className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
-                            <div className="flex-1 text-left">
-                                <p className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>Tidak, Belum Nobar</p>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Tawarkan lisensi ke merchant</p>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-            </AgentLayout>
-        );
-    }
-
     // ==================== STEP: FORM ====================
     const reportConfig = REPORT_TYPES[reportType] || REPORT_TYPES.other;
     const isViolation = reportType?.startsWith('violation_');
-    const needsVenueInfo = !venueData && (reportType === 'violation_no_license' || reportType === 'offering' || reportType === 'violation_invalid_qr');
+    const isVerified = reportType === 'verified' || reportType === 'verified_non_commercial';
+    const needsVenueInfo = !venueData && (reportType === 'violation_no_license' || reportType === 'lead' || reportType === 'documentation');
+
+    // Determine back step based on report type
+    const getFormBackStep = () => {
+        if (reportType === 'verified' || reportType === 'violation_ads' || reportType === 'violation_venue' || reportType === 'other') return 'qr_valid_ads';
+        if (reportType === 'violation_capacity') return 'qr_valid_commercial';
+        if (reportType === 'verified_non_commercial') return 'qr_valid_non_commercial';
+        if (reportType === 'violation_invalid_qr') return 'qr_invalid';
+        if (reportType === 'violation_no_license' || reportType === 'lead') return 'no_qr_commercial';
+        if (reportType === 'documentation') return 'no_qr_type';
+        return 'start';
+    };
 
     return (
         <AgentLayout>
             <div className="space-y-6 pb-4">
                 <div className="flex items-center gap-3">
-                    <button onClick={resetFlow} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
+                    <button onClick={() => setStep(getFormBackStep())} className={`p-2 rounded-lg ${isDark ? 'text-emerald-500/60 hover:bg-emerald-500/10' : 'text-gray-400 hover:bg-gray-100'}`}>
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div>
@@ -675,12 +768,12 @@ export default function AgentReport() {
                 {/* Report Type Badge */}
                 <div className={`p-4 rounded-xl flex items-center gap-3 ${
                     isViolation ? (isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200')
-                    : reportType === 'approved' ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200')
+                    : isVerified ? (isDark ? 'bg-emerald-500/10 border border-emerald-500/20' : 'bg-emerald-50 border border-emerald-200')
                     : (isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200')
                 }`}>
                     <reportConfig.icon className={`w-6 h-6 ${
                         isViolation ? (isDark ? 'text-red-400' : 'text-red-600')
-                        : reportType === 'approved' ? (isDark ? 'text-emerald-400' : 'text-emerald-600')
+                        : isVerified ? (isDark ? 'text-emerald-400' : 'text-emerald-600')
                         : (isDark ? 'text-blue-400' : 'text-blue-600')
                     }`} />
                     <div>
@@ -754,7 +847,7 @@ export default function AgentReport() {
                 {/* Submit */}
                 <button onClick={handleSubmit} disabled={isSubmitting} className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium ${isSubmitting ? 'opacity-70' : ''} ${
                     isViolation ? (isDark ? 'bg-red-500 text-white' : 'bg-red-600 text-white')
-                    : reportType === 'approved' ? (isDark ? 'bg-emerald-500 text-white' : 'bg-teal-600 text-white')
+                    : isVerified ? (isDark ? 'bg-emerald-500 text-white' : 'bg-teal-600 text-white')
                     : (isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white')
                 }`}>
                     {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}

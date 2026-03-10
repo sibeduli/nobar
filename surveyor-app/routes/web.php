@@ -59,9 +59,15 @@ Route::middleware('auth:pic')->group(function () {
         return Inertia::render('Help');
     });
 
-    Route::get('/surveys', function () {
-        return Inertia::render('Surveys/Index');
-    });
+    Route::get('/surveys', [App\Http\Controllers\SurveyController::class, 'index'])->name('pic.surveys.index');
+    Route::get('/surveys/export', [App\Http\Controllers\SurveyController::class, 'export'])->name('pic.surveys.export');
+    Route::get('/surveys/{survey}', [App\Http\Controllers\SurveyController::class, 'show'])->name('pic.surveys.show');
+    Route::put('/surveys/{survey}/status', [App\Http\Controllers\SurveyController::class, 'updateStatus'])->name('pic.surveys.update-status');
+    Route::post('/surveys/bulk-status', [App\Http\Controllers\SurveyController::class, 'bulkUpdateStatus'])->name('pic.surveys.bulk-status');
+    Route::delete('/surveys/{survey}', [App\Http\Controllers\SurveyController::class, 'destroy'])->name('pic.surveys.destroy');
+    Route::post('/surveys/bulk-delete', [App\Http\Controllers\SurveyController::class, 'bulkDelete'])->name('pic.surveys.bulk-delete');
+    Route::put('/surveys/{survey}/pic-edit', [App\Http\Controllers\SurveyController::class, 'picEdit'])->name('pic.surveys.pic-edit');
+    Route::delete('/surveys/{survey}/pic-edit', [App\Http\Controllers\SurveyController::class, 'revertPicEdit'])->name('pic.surveys.revert-pic-edit');
 
     Route::get('/venues/map', function () {
         return Inertia::render('Venues/Map');
@@ -92,25 +98,12 @@ Route::middleware('auth:agent')->prefix('agent')->group(function () {
         return Inertia::render('Agent/Dashboard');
     })->name('agent.dashboard');
 
-    Route::get('/surveys', function () {
-        return Inertia::render('Agent/Surveys/Index');
-    });
+    Route::get('/surveys', [App\Http\Controllers\AgentSurveyController::class, 'mySurveys']);
+    Route::get('/surveys/{id}', [App\Http\Controllers\AgentSurveyController::class, 'showSurvey']);
 
-    Route::get('/surveys/new', function () {
-        return Inertia::render('Agent/Surveys/Create');
-    });
-
-    Route::get('/report', function () {
-        return Inertia::render('Agent/Report/Index');
-    });
-
-    Route::get('/surveys/{id}', function ($id) {
-        return Inertia::render('Agent/Surveys/Show', ['id' => $id]);
-    });
-
-    Route::get('/violations/report', function () {
-        return Inertia::render('Agent/Violations/Report');
-    });
+    Route::get('/report', [App\Http\Controllers\AgentSurveyController::class, 'index']);
+    Route::post('/report/validate-qr', [App\Http\Controllers\AgentSurveyController::class, 'validateQr']);
+    Route::post('/report/submit', [App\Http\Controllers\AgentSurveyController::class, 'store']);
 
     Route::get('/profile', [App\Http\Controllers\Auth\AgentAuthController::class, 'profile']);
 });

@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { useTheme } from '@/Contexts/ThemeContext';
 import { useToast } from '@/Contexts/ToastContext';
 import DataTable from '@/Components/DataTable';
 import Modal, { ConfirmModal } from '@/Components/Modal';
 import Button from '@/Components/Button';
-import { router } from '@inertiajs/react';
+import FormInput, { FormTextarea, FormSelect } from '@/Components/FormInput';
+import { router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { 
     ClipboardList,
     MapPin,
@@ -22,106 +24,103 @@ import {
     FileText,
     Store,
     AlertTriangle,
-    Users
+    Users,
+    Briefcase,
+    RefreshCw,
+    Pencil,
+    History,
 } from 'lucide-react';
 
-// Capacity tiers with pricing
-const capacityTiers = {
-    '≤50': { label: '≤50 orang', price: 5000000 },
-    '51-100': { label: '51-100 orang', price: 10000000 },
-    '101-250': { label: '101-250 orang', price: 20000000 },
-    '251-500': { label: '251-500 orang', price: 40000000 },
-    '501-1000': { label: '501-1000 orang', price: 100000000 },
+// Report type labels
+const REPORT_TYPES = {
+    verified: { label: 'Terverifikasi', color: 'emerald' },
+    verified_non_commercial: { label: 'Terverifikasi (Non-Komersial)', color: 'emerald' },
+    violation_invalid_qr: { label: 'QR Invalid', color: 'red' },
+    violation_capacity: { label: 'Melebihi Kapasitas', color: 'red' },
+    violation_ads: { label: 'Iklan Ilegal', color: 'red' },
+    violation_no_license: { label: 'Tanpa Lisensi', color: 'red' },
+    violation_venue: { label: 'Venue Tidak Sesuai', color: 'red' },
+    lead: { label: 'Penawaran Lisensi', color: 'blue' },
+    documentation: { label: 'Dokumentasi', color: 'blue' },
+    other: { label: 'Lainnya', color: 'gray' },
 };
-
-// Mock survey data - Venue untuk lisensi Nobar Piala Dunia 2026
-const mockSurveys = [
-    { id: 1, venueName: 'Warkop Bola Mania', venueType: 'Cafe/Warkop', contactPerson: 'Pak Joko', phone: '08123456789', address: 'Jl. Sudirman No. 45, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '≤50', lat: -6.2088, lng: 106.8456, agentName: 'Ahmad Sudrajat', surveyDate: '2024-03-10', status: 'approved', hasPhotos: true, notes: 'Lokasi strategis, 3 TV besar, parkir memadai' },
-    { id: 2, venueName: 'Resto Piala Dunia', venueType: 'Restoran', contactPerson: 'Bu Siti', phone: '08234567890', address: 'Jl. Gatot Subroto No. 12, Jakarta Barat', area: 'Jakarta Barat', capacityTier: '51-100', lat: -6.2350, lng: 106.7942, agentName: 'Budi Santoso', surveyDate: '2024-03-10', status: 'approved', hasPhotos: true, notes: 'Kapasitas besar, AC, proyektor tersedia' },
-    { id: 3, venueName: 'Kedai Kopi Stadium', venueType: 'Cafe/Warkop', contactPerson: 'Mas Andi', phone: '08345678901', address: 'Jl. Pemuda No. 78, Jakarta Timur', area: 'Jakarta Timur', capacityTier: '≤50', lat: -6.2254, lng: 106.9004, agentName: 'Citra Dewi', surveyDate: '2024-03-10', status: 'pending', hasPhotos: true, notes: 'Menunggu verifikasi dokumen usaha' },
-    { id: 4, venueName: 'Bar Kick Off', venueType: 'Bar', contactPerson: 'Mr. Kevin', phone: '08456789012', address: 'Jl. Kemang Raya No. 100, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '51-100', lat: -6.2607, lng: 106.8137, agentName: 'Eka Putri', surveyDate: '2024-03-09', status: 'rejected', hasPhotos: false, notes: 'Izin usaha tidak lengkap' },
-    { id: 5, venueName: 'Hotel Grand Sport', venueType: 'Hotel/Penginapan', contactPerson: 'Ibu Maya', phone: '08567890123', address: 'Jl. Raya Serpong No. 55, Tangerang', area: 'Tangerang', capacityTier: '101-250', lat: -6.2894, lng: 106.6665, agentName: 'Fajar Ramadhan', surveyDate: '2024-03-09', status: 'approved', hasPhotos: true, notes: 'Ballroom besar, sound system profesional' },
-    { id: 6, venueName: 'Lapangan Futsal Jaya', venueType: 'Venue Olahraga', contactPerson: 'Pak Hendra', phone: '08678901234', address: 'Jl. Margonda Raya No. 200, Depok', area: 'Depok', capacityTier: '101-250', lat: -6.3702, lng: 106.8312, agentName: 'Hendra Wijaya', surveyDate: '2024-03-08', status: 'approved', hasPhotos: true, notes: 'Layar LED outdoor, tribun penonton' },
-    { id: 7, venueName: 'Balai RW 05 Menteng', venueType: 'Balai Warga/Komunitas', contactPerson: 'Ketua RW', phone: '08789012345', address: 'Jl. Thamrin No. 30, Jakarta Pusat', area: 'Jakarta Pusat', capacityTier: '51-100', lat: -6.1944, lng: 106.8229, agentName: 'Dedi Kurniawan', surveyDate: '2024-03-08', status: 'approved', hasPhotos: true, notes: 'Acara komunitas warga' },
-    { id: 8, venueName: 'Cafe Nonton Bareng', venueType: 'Cafe/Warkop', contactPerson: 'Mas Budi', phone: '08890123456', address: 'Jl. Raya Bogor No. 150, Bogor', area: 'Bogor', capacityTier: '≤50', lat: -6.5971, lng: 106.8060, agentName: 'Indah Permata', surveyDate: '2024-03-07', status: 'pending', hasPhotos: true, notes: 'Proses verifikasi kapasitas' },
-    { id: 9, venueName: 'Restoran Sunda Goal', venueType: 'Restoran', contactPerson: 'Bu Rina', phone: '08901234567', address: 'Jl. Juanda No. 88, Bekasi', area: 'Bekasi', capacityTier: '101-250', lat: -6.2383, lng: 107.0000, agentName: 'Gita Nuraini', surveyDate: '2024-03-07', status: 'approved', hasPhotos: true, notes: '2 lantai, 4 TV, WiFi gratis' },
-    { id: 10, venueName: 'Sport Bar Champions', venueType: 'Bar', contactPerson: 'Mr. David', phone: '08012345678', address: 'Jl. Senopati No. 200, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '51-100', lat: -6.2443, lng: 106.8065, agentName: 'Joko Susilo', surveyDate: '2024-03-06', status: 'approved', hasPhotos: true, notes: 'Konsep sport bar, banyak TV' },
-    { id: 11, venueName: 'Hotel Bintang Lima', venueType: 'Hotel/Penginapan', contactPerson: 'GM Hotel', phone: '08123456780', address: 'Jl. Merdeka No. 10, Jakarta Pusat', area: 'Jakarta Pusat', capacityTier: '251-500', lat: -6.1751, lng: 106.8272, agentName: 'Lukman Hakim', surveyDate: '2024-03-06', status: 'approved', hasPhotos: true, notes: 'Convention hall, premium venue' },
-    { id: 12, venueName: 'GOR Kecamatan Ciputat', venueType: 'Venue Olahraga', contactPerson: 'Kepala GOR', phone: '08234567891', address: 'Jl. Raya Ciputat No. 75, Tangerang', area: 'Tangerang', capacityTier: '251-500', lat: -6.3105, lng: 106.7535, agentName: 'Kartika Sari', surveyDate: '2024-03-05', status: 'pending', hasPhotos: false, notes: 'Menunggu izin pemda' },
-];
 
 const statusConfig = {
     approved: { label: 'Disetujui', color: 'emerald' },
     pending: { label: 'Pending', color: 'amber' },
     rejected: { label: 'Ditolak', color: 'red' },
+    needs_review: { label: 'Perlu Review', color: 'blue' },
 };
 
-const venueTypeConfig = {
-    'Cafe/Warkop': 'amber',
-    'Restoran': 'blue',
-    'Bar': 'purple',
-    'Hotel/Penginapan': 'cyan',
-    'Venue Olahraga': 'emerald',
-    'Balai Warga/Komunitas': 'pink',
-    'Lainnya': 'gray',
+const categoryConfig = {
+    commercial: { label: 'Komersial', color: 'amber' },
+    non_commercial: { label: 'Non-Komersial', color: 'blue' },
 };
 
-// Violation types
-const violationTypes = {
-    capacity_exceeded: { label: 'Melebihi Kapasitas', color: 'red' },
-    ads_violation: { label: 'Pelanggaran Iklan', color: 'amber' },
-    other: { label: 'Lainnya', color: 'gray' },
-};
-
-// Mock violations data
-const mockViolations = [
-    { id: 101, venueName: 'Warkop Bola Mania', venueType: 'Cafe/Warkop', contactPerson: 'Pak Joko', phone: '08123456789', address: 'Jl. Sudirman No. 45, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '≤50', violationType: 'capacity_exceeded', reportedBy: 'Ahmad Sudrajat', reportDate: '2024-03-15', actualCount: 75, status: 'open', notes: 'Ditemukan 75 pengunjung saat pertandingan, melebihi kapasitas 50 orang' },
-    { id: 102, venueName: 'Kedai Malam Jaya', venueType: 'Cafe/Warkop', contactPerson: 'Mas Rudi', phone: '08111222333', address: 'Jl. Kebon Jeruk No. 10, Jakarta Barat', area: 'Jakarta Barat', capacityTier: '51-100', violationType: 'ads_violation', reportedBy: 'Budi Santoso', reportDate: '2024-03-14', actualCount: null, status: 'open', notes: 'Venue memasang banner sponsor brand minuman sendiri saat nobar, bukan sponsor resmi TVRI' },
-    { id: 103, venueName: 'Resto Piala Dunia', venueType: 'Restoran', contactPerson: 'Bu Siti', phone: '08234567890', address: 'Jl. Gatot Subroto No. 12, Jakarta Barat', area: 'Jakarta Barat', capacityTier: '51-100', violationType: 'capacity_exceeded', reportedBy: 'Citra Dewi', reportDate: '2024-03-12', actualCount: 150, status: 'resolved', notes: 'Ditemukan 150 pengunjung, sudah diberikan peringatan' },
-    { id: 104, venueName: 'Warung Pojok', venueType: 'Cafe/Warkop', contactPerson: 'Pak Darto', phone: '08555666777', address: 'Jl. Raya Depok No. 88, Depok', area: 'Depok', capacityTier: '≤50', violationType: 'ads_violation', reportedBy: 'Eka Putri', reportDate: '2024-03-10', actualCount: null, status: 'open', notes: 'Menampilkan iklan rokok di layar saat jeda pertandingan' },
-    { id: 105, venueName: 'Sport Cafe 88', venueType: 'Cafe/Warkop', contactPerson: 'Mr. Tony', phone: '08999888777', address: 'Jl. Senayan No. 55, Jakarta Selatan', area: 'Jakarta Selatan', capacityTier: '51-100', violationType: 'capacity_exceeded', reportedBy: 'Fajar Ramadhan', reportDate: '2024-03-08', actualCount: 180, status: 'resolved', notes: 'Pelanggaran kedua, dikenakan denda' },
-    { id: 106, venueName: 'Hotel Grand Sport', venueType: 'Hotel/Penginapan', contactPerson: 'Ibu Maya', phone: '08567890123', address: 'Jl. Raya Serpong No. 55, Tangerang', area: 'Tangerang', capacityTier: '101-250', violationType: 'other', reportedBy: 'Hendra Wijaya', reportDate: '2024-03-05', actualCount: null, status: 'resolved', notes: 'Memungut biaya masuk tambahan di luar ketentuan lisensi' },
-];
-
-export default function SurveysIndex() {
+export default function SurveysIndex({ surveys = [], stats = {}, violationStats = {}, leadStats = {} }) {
     const { theme } = useTheme();
     const toast = useToast();
     const isDark = theme === 'dark';
+    const { flash } = usePage().props;
 
     // Get tab from URL
     const urlParams = new URLSearchParams(window.location.search);
     const tabFromUrl = urlParams.get('tab');
 
-    const [surveys] = useState(mockSurveys);
-    const [violations] = useState(mockViolations);
+    // Use props directly instead of local state so data updates on Inertia reload
     const [selectedSurvey, setSelectedSurvey] = useState(null);
-    const [selectedViolation, setSelectedViolation] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
-    const [showViolationModal, setShowViolationModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
     const [selectedSurveys, setSelectedSurveys] = useState([]);
-    const [activeTab, setActiveTab] = useState(tabFromUrl === 'violations' ? 'violations' : 'all');
+    const [activeTab, setActiveTab] = useState(
+        tabFromUrl === 'violations' ? 'violations' : 
+        tabFromUrl === 'leads' ? 'leads' : 'all'
+    );
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editForm, setEditForm] = useState({
+        venue_contact: '',
+        venue_phone: '',
+        category: '',
+        capacity_limit: '',
+        description: '',
+    });
+    const [isEditing, setIsEditing] = useState(false);
+    const [isReverting, setIsReverting] = useState(false);
+    const [showCompareModal, setShowCompareModal] = useState(false);
+    const [showResolveConfirm, setShowResolveConfirm] = useState(false);
+    const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
 
-    // Update URL when tab changes
+
+    const handleRefresh = () => {
+        setIsRefreshing(true);
+        router.visit(window.location.pathname + window.location.search, {
+            preserveScroll: true,
+            onFinish: () => setIsRefreshing(false),
+        });
+    };
+
+    // Separate violations for the violations tab (filtered view)
+    const violations = surveys.filter(s => s.is_violation);
+    // Separate leads for the leads tab (filtered view)
+    const leads = surveys.filter(s => s.report_type === 'lead');
+    // All surveys shown in main tabs (including violations)
+    const allSurveys = surveys;
+
+    // Update URL and refresh data when tab changes
     const handleTabChange = (tab) => {
-        setActiveTab(tab);
-        const url = tab === 'violations' ? '/surveys?tab=violations' : '/surveys';
-        window.history.pushState({}, '', url);
+        const url = tab === 'violations' ? '/surveys?tab=violations' : 
+                    tab === 'leads' ? '/surveys?tab=leads' : '/surveys';
+        router.visit(url, { preserveScroll: true });
     };
 
-    // Summary stats
-    const stats = {
-        total: surveys.length,
-        approved: surveys.filter(s => s.status === 'approved').length,
-        pending: surveys.filter(s => s.status === 'pending').length,
-        rejected: surveys.filter(s => s.status === 'rejected').length,
-    };
-
-    // Filter by tab
+    // Filter by tab (all surveys including violations)
     const filteredSurveys = activeTab === 'all' 
-        ? surveys 
-        : surveys.filter(s => s.status === activeTab);
+        ? allSurveys 
+        : allSurveys.filter(s => s.status === activeTab);
 
     const handleViewDetail = (survey) => {
         setSelectedSurvey(survey);
@@ -133,18 +132,162 @@ export default function SurveysIndex() {
         setShowDeleteModal(true);
     };
 
-    const confirmDelete = () => {
-        toast.success(`Survey "${selectedSurvey.merchantName}" berhasil dihapus`);
-        setShowDeleteModal(false);
-        setSelectedSurvey(null);
+    const confirmDelete = async () => {
+        if (!selectedSurvey) return;
+        router.delete(`/surveys/${selectedSurvey.id}`, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => {
+                toast.success('Survey berhasil dihapus');
+                setShowDeleteModal(false);
+                setSelectedSurvey(null);
+            },
+            onError: () => toast.error('Gagal menghapus survey'),
+        });
+    };
+
+    const handleUpdateStatus = async (surveyId, status) => {
+        setIsUpdating(true);
+        router.put(`/surveys/${surveyId}/status`, { status }, {
+            preserveScroll: true,
+            preserveState: false, // Force refresh of page data
+            onSuccess: () => {
+                toast.success(`Status survey berhasil diperbarui`);
+                setShowDetailModal(false);
+                setSelectedSurvey(null);
+            },
+            onError: () => toast.error('Gagal memperbarui status'),
+            onFinish: () => setIsUpdating(false),
+        });
+    };
+
+    const handleOpenEdit = (survey) => {
+        setSelectedSurvey(survey);
+        setEditForm({
+            venue_contact: survey.pic_venue_contact || survey.venue_contact || '',
+            venue_phone: survey.pic_venue_phone || survey.venue_phone || '',
+            category: survey.pic_category || survey.category || '',
+            capacity_limit: survey.pic_capacity_limit || survey.capacity_limit || '',
+            description: survey.pic_description || survey.description || '',
+        });
+        setShowEditModal(true);
+    };
+
+    const handleSaveEdit = () => {
+        if (!selectedSurvey) return;
+        
+        const newCapacity = parseInt(editForm.capacity_limit) || selectedSurvey.capacity_limit || 0;
+        const actualVisitors = selectedSurvey.actual_visitors || 0;
+
+        // Handle capacity violations
+        if (selectedSurvey.report_type === 'violation_capacity') {
+            if (selectedSurvey.status === 'pending' && newCapacity >= actualVisitors) {
+                // Pending -> Will resolve - show confirmation
+                setShowResolveConfirm(true);
+                return;
+            }
+            if (selectedSurvey.status === 'approved' && newCapacity < actualVisitors) {
+                // Resolved -> Will reactivate - show confirmation
+                setShowReactivateConfirm(true);
+                return;
+            }
+            // No status change - just save
+        }
+        // For other violation types (pending), show resolve confirmation
+        else if (selectedSurvey.is_violation && selectedSurvey.status === 'pending') {
+            setShowResolveConfirm(true);
+            return;
+        }
+
+        executeSaveEdit();
+    };
+
+    const executeSaveEdit = () => {
+        if (!selectedSurvey) return;
+        const surveyId = selectedSurvey.id;
+        setIsEditing(true);
+        setShowResolveConfirm(false);
+        setShowReactivateConfirm(false);
+        setShowEditModal(false);
+        router.put(`/surveys/${surveyId}/pic-edit`, editForm, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                // Find updated survey from fresh page data
+                const updatedSurvey = page.props.surveys?.find(s => s.id === surveyId);
+                if (updatedSurvey) {
+                    setSelectedSurvey(updatedSurvey);
+                    setShowDetailModal(true);
+                }
+            },
+            onError: () => toast.error('Gagal memperbarui data survey'),
+            onFinish: () => setIsEditing(false),
+        });
+    };
+
+    const handleRevertPicEdit = () => {
+        if (!selectedSurvey) return;
+
+        // If this is a resolved capacity violation, check if original data still violates
+        if (selectedSurvey.report_type === 'violation_capacity' && selectedSurvey.status === 'approved') {
+            const originalCapacity = selectedSurvey.capacity_limit || 0;
+            const actualVisitors = selectedSurvey.actual_visitors || 0;
+            
+            if (originalCapacity < actualVisitors) {
+                // Will reactivate - show confirmation
+                setShowReactivateConfirm(true);
+                return;
+            }
+            // Won't reactivate - just revert without confirmation
+        }
+        // For other violation types, show confirmation
+        else if (selectedSurvey.is_violation && selectedSurvey.status === 'approved') {
+            setShowReactivateConfirm(true);
+            return;
+        }
+
+        executeRevertPicEdit();
+    };
+
+    const executeRevertPicEdit = () => {
+        if (!selectedSurvey) return;
+        const surveyId = selectedSurvey.id;
+        setIsReverting(true);
+        setShowReactivateConfirm(false);
+        setShowCompareModal(false);
+        setShowDetailModal(false);
+        router.delete(`/surveys/${surveyId}/pic-edit`, {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                // Find updated survey from fresh page data
+                const updatedSurvey = page.props.surveys?.find(s => s.id === surveyId);
+                if (updatedSurvey) {
+                    setSelectedSurvey(updatedSurvey);
+                    setShowDetailModal(true);
+                }
+            },
+            onError: () => toast.error('Gagal mengembalikan ke versi agent'),
+            onFinish: () => setIsReverting(false),
+        });
     };
 
     const handleBulkApprove = (selected) => {
-        toast.success(`${selected.length} survey berhasil disetujui`);
+        const ids = selected.map(s => s.id);
+        router.post('/surveys/bulk-status', { ids, status: 'approved' }, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => toast.success(`${selected.length} survey berhasil disetujui`),
+            onError: () => toast.error('Gagal memperbarui status'),
+        });
     };
 
     const handleBulkReject = (selected) => {
-        toast.success(`${selected.length} survey berhasil ditolak`);
+        const ids = selected.map(s => s.id);
+        router.post('/surveys/bulk-status', { ids, status: 'rejected' }, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => toast.success(`${selected.length} survey berhasil ditolak`),
+            onError: () => toast.error('Gagal memperbarui status'),
+        });
     };
 
     const handleBulkDelete = (selected) => {
@@ -153,13 +296,21 @@ export default function SurveysIndex() {
     };
 
     const confirmBulkDelete = () => {
-        toast.success(`${selectedSurveys.length} survey berhasil dihapus`);
-        setSelectedSurveys([]);
-        setShowBulkDeleteModal(false);
+        const ids = selectedSurveys.map(s => s.id);
+        router.post('/surveys/bulk-delete', { ids }, {
+            preserveScroll: true,
+            preserveState: false,
+            onSuccess: () => {
+                toast.success(`${selectedSurveys.length} survey berhasil dihapus`);
+                setSelectedSurveys([]);
+                setShowBulkDeleteModal(false);
+            },
+            onError: () => toast.error('Gagal menghapus survey'),
+        });
     };
 
-    const handleExport = (selected) => {
-        toast.info(`Mengekspor ${selected.length} data survey...`);
+    const handleExport = () => {
+        window.location.href = '/surveys/export';
     };
 
     const bulkActions = [
@@ -170,11 +321,12 @@ export default function SurveysIndex() {
     ];
 
     const StatusBadge = ({ status }) => {
-        const config = statusConfig[status];
+        const config = statusConfig[status] || statusConfig.pending;
         const colors = {
             emerald: isDark ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30' : 'bg-emerald-50 text-emerald-700',
             amber: isDark ? 'bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/30' : 'bg-amber-50 text-amber-700',
             red: isDark ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/30' : 'bg-red-50 text-red-700',
+            blue: isDark ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30' : 'bg-blue-50 text-blue-700',
         };
 
         return (
@@ -184,103 +336,105 @@ export default function SurveysIndex() {
         );
     };
 
-    const TypeBadge = ({ type }) => {
-        const color = venueTypeConfig[type] || 'gray';
+    const ReportTypeBadge = ({ type }) => {
+        const config = REPORT_TYPES[type] || REPORT_TYPES.other;
         const colors = {
             blue: isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700',
-            purple: isDark ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-50 text-purple-700',
             amber: isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-700',
             emerald: isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700',
-            pink: isDark ? 'bg-pink-500/20 text-pink-400' : 'bg-pink-50 text-pink-700',
-            cyan: isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-50 text-cyan-700',
+            red: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700',
             gray: isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-50 text-gray-700',
         };
 
         return (
-            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${colors[color]}`}>
-                {type}
+            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${colors[config.color]}`}>
+                {config.label}
+            </span>
+        );
+    };
+
+    const CategoryBadge = ({ category }) => {
+        const config = categoryConfig[category] || categoryConfig.commercial;
+        const colors = {
+            amber: isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-700',
+            blue: isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700',
+        };
+
+        return (
+            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-md ${colors[config.color]}`}>
+                {config.label}
             </span>
         );
     };
 
     const columns = [
         { 
-            key: 'venueName', 
+            key: 'venue_name', 
             label: 'Venue',
             render: (value, row) => (
                 <div>
-                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value}</div>
+                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value || 'Unknown'}</div>
                     <div className="flex items-center gap-1 mt-0.5">
-                        <TypeBadge type={row.venueType} />
+                        <ReportTypeBadge type={row.report_type} />
                     </div>
                 </div>
             )
         },
         { 
-            key: 'contactPerson', 
-            label: 'Contact Person',
+            key: 'venue_contact', 
+            label: 'Contact',
             render: (value, row) => (
                 <div>
-                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</div>
-                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.phone}</div>
+                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || '-'}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venue_phone || '-'}</div>
                 </div>
             )
         },
         { 
-            key: 'address', 
+            key: 'venue_address', 
             label: 'Alamat',
-            render: (value, row) => (
-                <div>
-                    <div className={`text-sm truncate max-w-[200px] ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</div>
-                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.area}</div>
+            render: (value) => (
+                <div className={`text-sm truncate max-w-[200px] ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
+                    {value || '-'}
                 </div>
             )
         },
         { 
-            key: 'capacityTier', 
-            label: 'Kapasitas',
-            render: (value) => {
-                const tier = capacityTiers[value];
-                return (
-                    <div>
-                        <div className={`font-medium ${isDark ? 'text-emerald-400' : 'text-teal-600'}`}>
-                            {tier?.label || value}
-                        </div>
-                        <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                            Rp {tier?.price?.toLocaleString('id-ID')}
-                        </div>
-                    </div>
-                );
-            }
+            key: 'category', 
+            label: 'Kategori',
+            render: (value) => <CategoryBadge category={value} />
         },
         { 
-            key: 'agentName', 
-            label: 'Surveyor',
+            key: 'agent_name', 
+            label: 'Agent',
             render: (value) => (
                 <div className="flex items-center gap-2">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
                         ${isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-teal-100 text-teal-700'}
                     `}>
-                        {value.charAt(0)}
+                        {value?.charAt(0) || '?'}
                     </div>
-                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</span>
+                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || 'Unknown'}</span>
                 </div>
             )
         },
         { 
-            key: 'surveyDate', 
+            key: 'created_at', 
             label: 'Tanggal',
             render: (value) => (
                 <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                    {new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {value ? new Date(value).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                 </span>
             )
         },
         {
-            key: 'hasPhotos',
+            key: 'photos',
             label: 'Foto',
-            render: (value) => value ? (
-                <Camera className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+            render: (value) => value && value.length > 0 ? (
+                <div className="flex items-center gap-1">
+                    <Camera className={`w-4 h-4 ${isDark ? 'text-emerald-400' : 'text-teal-600'}`} />
+                    <span className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{value.length}</span>
+                </div>
             ) : (
                 <span className={`text-xs ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`}>-</span>
             )
@@ -321,31 +475,21 @@ export default function SurveysIndex() {
 
     const filters = [
         {
-            key: 'venueType',
-            label: 'Jenis Venue',
+            key: 'report_type',
+            label: 'Tipe Laporan',
             options: [
-                { value: 'Cafe/Warkop', label: 'Cafe/Warkop' },
-                { value: 'Restoran', label: 'Restoran' },
-                { value: 'Bar', label: 'Bar' },
-                { value: 'Hotel/Penginapan', label: 'Hotel/Penginapan' },
-                { value: 'Venue Olahraga', label: 'Venue Olahraga' },
-                { value: 'Balai Warga/Komunitas', label: 'Balai Warga/Komunitas' },
-                { value: 'Lainnya', label: 'Lainnya' },
+                { value: 'verified', label: 'Terverifikasi' },
+                { value: 'verified_non_commercial', label: 'Terverifikasi (Non-Komersial)' },
+                { value: 'lead', label: 'Penawaran Lisensi' },
+                { value: 'documentation', label: 'Dokumentasi' },
             ]
         },
         {
-            key: 'area',
-            label: 'Area',
+            key: 'category',
+            label: 'Kategori',
             options: [
-                { value: 'Jakarta Selatan', label: 'Jakarta Selatan' },
-                { value: 'Jakarta Barat', label: 'Jakarta Barat' },
-                { value: 'Jakarta Timur', label: 'Jakarta Timur' },
-                { value: 'Jakarta Pusat', label: 'Jakarta Pusat' },
-                { value: 'Jakarta Utara', label: 'Jakarta Utara' },
-                { value: 'Tangerang', label: 'Tangerang' },
-                { value: 'Bekasi', label: 'Bekasi' },
-                { value: 'Depok', label: 'Depok' },
-                { value: 'Bogor', label: 'Bogor' },
+                { value: 'commercial', label: 'Komersial' },
+                { value: 'non_commercial', label: 'Non-Komersial' },
             ]
         }
     ];
@@ -385,20 +529,15 @@ export default function SurveysIndex() {
         );
     };
 
-    // Violation stats
-    const violationStats = {
-        total: violations.length,
-        open: violations.filter(v => v.status === 'open').length,
-        resolved: violations.filter(v => v.status === 'resolved').length,
-    };
-
-    // Violation columns
+    // Violation columns - use report_type for badge
     const ViolationBadge = ({ type }) => {
-        const config = violationTypes[type];
+        const config = REPORT_TYPES[type];
         if (!config) return null;
         const colors = {
             red: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700',
             amber: isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-700',
+            blue: isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-50 text-blue-700',
+            emerald: isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700',
             gray: isDark ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-100 text-gray-700',
         };
         return (
@@ -411,10 +550,11 @@ export default function SurveysIndex() {
 
     const ViolationStatusBadge = ({ status }) => {
         const config = {
-            open: { label: 'Terbuka', color: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700' },
-            resolved: { label: 'Selesai', color: isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700' },
+            pending: { label: 'Terbuka', color: isDark ? 'bg-amber-500/20 text-amber-400' : 'bg-amber-50 text-amber-700' },
+            approved: { label: 'Selesai', color: isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700' },
+            rejected: { label: 'Ditolak', color: isDark ? 'bg-red-500/20 text-red-400' : 'bg-red-50 text-red-700' },
         };
-        const { label, color } = config[status] || config.open;
+        const { label, color } = config[status] || config.pending;
         return (
             <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${color}`}>
                 {label}
@@ -424,31 +564,31 @@ export default function SurveysIndex() {
 
     const violationColumns = [
         {
-            key: 'venueName',
+            key: 'venue_name',
             label: 'Venue',
             render: (value, row) => (
                 <div>
-                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value}</div>
-                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venueType}</div>
+                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value || 'Unknown'}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venue_address || '-'}</div>
                 </div>
             )
         },
         {
-            key: 'violationType',
+            key: 'report_type',
             label: 'Jenis Pelanggaran',
             render: (value) => <ViolationBadge type={value} />
         },
         {
-            key: 'actualCount',
+            key: 'actual_visitors',
             label: 'Detail',
             render: (value, row) => (
                 <div>
-                    {row.violationType === 'capacity_exceeded' ? (
+                    {row.report_type === 'violation_capacity' && value ? (
                         <>
                             <span className={`font-medium ${isDark ? 'text-red-400' : 'text-red-600'}`}>{value} orang</span>
-                            {row.capacityTier && (
+                            {(row.effective_capacity || row.capacity_limit) && (
                                 <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                                    Kapasitas: {capacityTiers[row.capacityTier]?.label}
+                                    Kapasitas: {row.effective_capacity || row.capacity_limit} orang
                                 </div>
                             )}
                         </>
@@ -459,13 +599,13 @@ export default function SurveysIndex() {
             )
         },
         {
-            key: 'reportedBy',
+            key: 'agent_name',
             label: 'Dilaporkan Oleh',
             render: (value, row) => (
                 <div>
-                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value}</div>
+                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || 'Unknown'}</div>
                     <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
-                        {new Date(row.reportDate).toLocaleDateString('id-ID')}
+                        {row.created_at ? new Date(row.created_at).toLocaleDateString('id-ID') : '-'}
                     </div>
                 </div>
             )
@@ -481,11 +621,64 @@ export default function SurveysIndex() {
             render: (_, row) => (
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={() => {
-                            setSelectedViolation(row);
-                            setShowViolationModal(true);
-                        }}
+                        onClick={() => handleViewDetail(row)}
                         className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-emerald-500/10 text-emerald-400' : 'hover:bg-gray-100 text-gray-600'}`}
+                    >
+                        <Eye className="w-4 h-4" />
+                    </button>
+                </div>
+            )
+        },
+    ];
+
+    // Lead columns for Penawaran tab
+    const leadColumns = [
+        {
+            key: 'venue_name',
+            label: 'Venue',
+            render: (value, row) => (
+                <div>
+                    <div className={`font-medium ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{value || 'Unknown'}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venue_address || '-'}</div>
+                </div>
+            )
+        },
+        {
+            key: 'venue_contact',
+            label: 'Kontak',
+            render: (value, row) => (
+                <div>
+                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || '-'}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{row.venue_phone || '-'}</div>
+                </div>
+            )
+        },
+        {
+            key: 'agent_name',
+            label: 'Dilaporkan Oleh',
+            render: (value, row) => (
+                <div>
+                    <div className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{value || 'Unknown'}</div>
+                    <div className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                        {row.created_at ? new Date(row.created_at).toLocaleDateString('id-ID') : '-'}
+                    </div>
+                </div>
+            )
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            render: (value) => <ViolationStatusBadge status={value} />
+        },
+        {
+            key: 'actions',
+            label: '',
+            render: (_, row) => (
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => handleViewDetail(row)}
+                        className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-emerald-500/10 text-emerald-500/60 hover:text-emerald-400' : 'hover:bg-gray-100 text-gray-400 hover:text-gray-600'}`}
+                        title="Lihat Detail"
                     >
                         <Eye className="w-4 h-4" />
                     </button>
@@ -510,11 +703,12 @@ export default function SurveysIndex() {
                 </div>
 
                 {/* Tab Switcher */}
+                <div className="flex items-center gap-3">
                 <div className={`flex gap-1 p-1 rounded-xl w-fit ${isDark ? 'bg-emerald-950/50' : 'bg-gray-100'}`}>
                     <button
                         onClick={() => handleTabChange('all')}
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                            ${activeTab !== 'violations'
+                            ${activeTab === 'all' || (!['violations', 'leads'].includes(activeTab) && !['violations', 'leads'].includes(activeTab))
                                 ? isDark ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white text-teal-700 shadow-sm'
                                 : isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-600 hover:text-gray-900'
                             }
@@ -539,6 +733,38 @@ export default function SurveysIndex() {
                                 {violationStats.open}
                             </span>
                         )}
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('leads')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${activeTab === 'leads'
+                                ? isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-white text-blue-700 shadow-sm'
+                                : isDark ? 'text-emerald-500/60 hover:text-emerald-400' : 'text-gray-600 hover:text-gray-900'
+                            }
+                        `}
+                    >
+                        <Briefcase className="w-4 h-4" />
+                        Penawaran
+                        {leadStats.open > 0 && (
+                            <span className={`px-1.5 py-0.5 text-xs rounded-full ${isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'}`}>
+                                {leadStats.open}
+                            </span>
+                        )}
+                    </button>
+                </div>
+                    <button
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                            ${isDark 
+                                ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50'
+                            }
+                        `}
+                        title="Refresh data"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        Perbarui Data
                     </button>
                 </div>
 
@@ -583,10 +809,69 @@ export default function SurveysIndex() {
 
                         {/* Violations Table */}
                         <DataTable
+                            key="violations"
                             data={violations}
                             columns={violationColumns}
                             searchPlaceholder="Cari pelanggaran..."
-                            searchKeys={['venueName', 'reportedBy', 'notes']}
+                            selectable
+                            bulkActions={[
+                                { label: 'Setujui', onClick: handleBulkApprove, variant: 'success' },
+                                { label: 'Tolak', onClick: handleBulkReject, variant: 'danger' },
+                            ]}
+                            onRowDoubleClick={handleViewDetail}
+                        />
+                    </>
+                ) : activeTab === 'leads' ? (
+                    <>
+                        {/* Lead Stats */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-blue-500/20' : 'bg-blue-100'}`}>
+                                        <Briefcase className={`w-5 h-5 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{leadStats.total}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Total Penawaran</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+                                        <Clock className={`w-5 h-5 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{leadStats.open}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Belum Ditindaklanjuti</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`p-4 rounded-xl ${isDark ? 'bg-[#0d1414] border border-emerald-900/30' : 'bg-white border border-gray-200'}`}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-100'}`}>
+                                        <CheckCircle className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-2xl font-bold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>{leadStats.resolved}</p>
+                                        <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Selesai</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Leads Table */}
+                        <DataTable
+                            key="leads"
+                            data={leads}
+                            columns={leadColumns}
+                            searchPlaceholder="Cari penawaran..."
+                            selectable
+                            bulkActions={[
+                                { label: 'Setujui', onClick: handleBulkApprove, variant: 'success' },
+                                { label: 'Tolak', onClick: handleBulkReject, variant: 'danger' },
+                            ]}
+                            onRowDoubleClick={handleViewDetail}
                         />
                     </>
                 ) : (
@@ -629,6 +914,7 @@ export default function SurveysIndex() {
 
                         {/* Data Table */}
                         <DataTable
+                            key="all"
                             data={filteredSurveys}
                             columns={columns}
                             filters={filters}
@@ -636,6 +922,7 @@ export default function SurveysIndex() {
                             selectable
                             bulkActions={bulkActions}
                             onSelectionChange={(selected) => console.log('Selected:', selected)}
+                            onRowDoubleClick={handleViewDetail}
                         />
                     </>
                 )}
@@ -677,9 +964,12 @@ export default function SurveysIndex() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <h3 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                                    {selectedSurvey.venueName}
+                                    {selectedSurvey.venue_name || 'Unknown Venue'}
                                 </h3>
-                                <TypeBadge type={selectedSurvey.venueType} />
+                                <div className="flex items-center gap-2 mt-1">
+                                    <ReportTypeBadge type={selectedSurvey.report_type} />
+                                    <CategoryBadge category={selectedSurvey.effective_category || selectedSurvey.category} />
+                                </div>
                             </div>
                             <StatusBadge status={selectedSurvey.status} />
                         </div>
@@ -687,33 +977,29 @@ export default function SurveysIndex() {
                         <div className={`grid grid-cols-2 gap-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                             <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
                                 <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Contact Person</p>
-                                <p className={`text-sm font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{selectedSurvey.contactPerson}</p>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedSurvey.phone}</p>
+                                <p className={`text-sm font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>{selectedSurvey.effective_contact || '-'}</p>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedSurvey.effective_phone || '-'}</p>
                             </div>
                             <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Kapasitas</p>
+                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Pengunjung / Kapasitas</p>
                                 <p className={`text-lg font-bold ${isDark ? 'text-emerald-400' : 'text-teal-600'}`}>
-                                    {capacityTiers[selectedSurvey.capacityTier]?.label}
-                                </p>
-                                <p className={`text-xs font-medium ${isDark ? 'text-amber-400' : 'text-amber-600'}`}>
-                                    Rp {capacityTiers[selectedSurvey.capacityTier]?.price?.toLocaleString('id-ID')}
+                                    {selectedSurvey.actual_visitors || '-'} / {selectedSurvey.effective_capacity || '-'}
                                 </p>
                             </div>
                         </div>
 
                         <div className={`space-y-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
-                            <div className="flex items-start gap-3">
-                                <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <div>
-                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.address}</p>
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedSurvey.area}</p>
+                            {selectedSurvey.venue_address && (
+                                <div className="flex items-start gap-3">
+                                    <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
+                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.venue_address}</p>
                                 </div>
-                            </div>
+                            )}
                             <div className="flex items-center gap-3">
                                 <User className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
                                 <div>
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Surveyor</p>
-                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.agentName}</span>
+                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Agent</p>
+                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.agent_name || 'Unknown'}</span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -721,39 +1007,65 @@ export default function SurveysIndex() {
                                 <div>
                                     <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Tanggal Survey</p>
                                     <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                                        {new Date(selectedSurvey.surveyDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        {selectedSurvey.created_at ? new Date(selectedSurvey.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {selectedSurvey.notes && (
+                        {selectedSurvey.effective_description && (
                             <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
                                 <div className="flex items-center gap-2 mb-1">
                                     <FileText className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                    <span className={`text-xs font-medium ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Catatan</span>
+                                    <span className={`text-xs font-medium ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Deskripsi</span>
                                 </div>
-                                <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.notes}</p>
+                                <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedSurvey.effective_description}</p>
                             </div>
                         )}
 
-                        {selectedSurvey.hasPhotos && (
+                        {selectedSurvey.photos && selectedSurvey.photos.length > 0 && (
                             <div className={`pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     <Camera className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                    <span className={`text-xs font-medium ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Foto Survey</span>
+                                    <span className={`text-xs font-medium ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Foto Survey ({selectedSurvey.photos.length})</span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
-                                    {[1, 2, 3].map((i) => (
-                                        <div
-                                            key={i}
-                                            className={`aspect-square rounded-lg flex items-center justify-center
-                                                ${isDark ? 'bg-emerald-950/50' : 'bg-gray-200'}
-                                            `}
+                                    {selectedSurvey.photos.map((photo, i) => (
+                                        <button 
+                                            key={i} 
+                                            className="aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => setSelectedPhoto(photo)}
                                         >
-                                            <span className={`text-xs ${isDark ? 'text-emerald-500/40' : 'text-gray-400'}`}>Foto {i}</span>
-                                        </div>
+                                            <img src={photo} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                                        </button>
                                     ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedSurvey.admin_notes && (
+                            <div className={`p-3 rounded-lg ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
+                                <p className={`text-xs font-medium ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>Catatan Admin</p>
+                                <p className={`text-sm ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>{selectedSurvey.admin_notes}</p>
+                            </div>
+                        )}
+
+                        {/* PIC Edit indicator with compare button */}
+                        {selectedSurvey.has_pic_edits && (
+                            <div className={`p-3 rounded-lg ${isDark ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-blue-50 border border-blue-200'}`}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <History className={`w-4 h-4 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                                        <p className={`text-xs font-medium ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>
+                                            Data telah diedit oleh PIC
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowCompareModal(true)}
+                                        className={`text-xs font-medium px-2 py-1 rounded ${isDark ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                    >
+                                        Bandingkan & Kembalikan
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -762,23 +1074,26 @@ export default function SurveysIndex() {
                             <Button variant="ghost" onClick={() => setShowDetailModal(false)}>
                                 Tutup
                             </Button>
+                            <Button 
+                                variant="secondary"
+                                onClick={() => handleOpenEdit(selectedSurvey)}
+                            >
+                                <Pencil className="w-4 h-4" />
+                                Edit
+                            </Button>
                             {selectedSurvey.status === 'pending' && (
                                 <>
                                     <Button 
                                         variant="danger" 
-                                        onClick={() => {
-                                            toast.success('Survey ditolak');
-                                            setShowDetailModal(false);
-                                        }}
+                                        disabled={isUpdating}
+                                        onClick={() => handleUpdateStatus(selectedSurvey.id, 'rejected')}
                                     >
                                         <XCircle className="w-4 h-4" />
                                         Tolak
                                     </Button>
                                     <Button 
-                                        onClick={() => {
-                                            toast.success('Survey disetujui');
-                                            setShowDetailModal(false);
-                                        }}
+                                        disabled={isUpdating}
+                                        onClick={() => handleUpdateStatus(selectedSurvey.id, 'approved')}
                                     >
                                         <CheckCircle className="w-4 h-4" />
                                         Setujui
@@ -790,90 +1105,258 @@ export default function SurveysIndex() {
                 )}
             </Modal>
 
-            {/* Violation Detail Modal */}
+            {/* Edit Modal */}
             <Modal
-                isOpen={showViolationModal}
-                onClose={() => setShowViolationModal(false)}
-                title="Detail Pelanggaran"
+                isOpen={showEditModal}
+                onClose={() => setShowEditModal(false)}
+                title="Edit Data Survey (PIC)"
                 size="md"
             >
-                {selectedViolation && (
+                {selectedSurvey && (
                     <div className="space-y-4">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <h3 className={`text-lg font-semibold ${isDark ? 'text-emerald-50' : 'text-gray-900'}`}>
-                                    {selectedViolation.venueName}
-                                </h3>
-                                <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedViolation.venueType}</p>
-                            </div>
-                            <ViolationStatusBadge status={selectedViolation.status} />
-                        </div>
+                        <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                            Perubahan akan disimpan sebagai versi PIC. Data asli dari agent tetap tersimpan.
+                        </p>
 
-                        <div className={`p-4 rounded-lg ${isDark ? 'bg-red-500/10 border border-red-500/20' : 'bg-red-50 border border-red-200'}`}>
-                            <div className="flex items-center gap-2 mb-2">
-                                <AlertTriangle className={`w-5 h-5 ${isDark ? 'text-red-400' : 'text-red-600'}`} />
-                                <ViolationBadge type={selectedViolation.violationType} />
-                            </div>
-                            <p className={`text-sm ${isDark ? 'text-red-300' : 'text-red-700'}`}>{selectedViolation.notes}</p>
-                        </div>
-
-                        <div className={`grid grid-cols-2 gap-3`}>
-                            <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Jumlah Pengunjung</p>
-                                <p className={`text-xl font-bold ${isDark ? 'text-red-400' : 'text-red-600'}`}>{selectedViolation.actualCount} orang</p>
-                            </div>
-                            <div className={`p-3 rounded-lg ${isDark ? 'bg-emerald-950/30' : 'bg-gray-50'}`}>
-                                <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Kapasitas Lisensi</p>
-                                <p className={`text-xl font-bold ${isDark ? 'text-emerald-400' : 'text-teal-600'}`}>
-                                    {selectedViolation.capacityTier ? capacityTiers[selectedViolation.capacityTier]?.label : 'Tidak ada lisensi'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className={`space-y-3 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
-                            <div className="flex items-start gap-3">
-                                <MapPin className={`w-4 h-4 mt-0.5 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <div>
-                                    <p className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedViolation.address}</p>
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>{selectedViolation.area}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <User className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <div>
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Dilaporkan Oleh</p>
-                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>{selectedViolation.reportedBy}</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Calendar className={`w-4 h-4 ${isDark ? 'text-emerald-500/60' : 'text-gray-400'}`} />
-                                <div>
-                                    <p className={`text-xs ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>Tanggal Laporan</p>
-                                    <span className={`text-sm ${isDark ? 'text-emerald-100' : 'text-gray-700'}`}>
-                                        {new Date(selectedViolation.reportDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {selectedViolation.status === 'open' && (
-                            <div className={`flex gap-2 pt-4 border-t ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
-                                <Button
-                                    variant="primary"
-                                    className="flex-1"
-                                    onClick={() => {
-                                        toast.success('Pelanggaran ditandai selesai');
-                                        setShowViolationModal(false);
-                                    }}
-                                >
-                                    <CheckCircle className="w-4 h-4" />
-                                    Tandai Selesai
-                                </Button>
+                        {/* Show agent original vs PIC version indicator */}
+                        {selectedSurvey.has_pic_edits && (
+                            <div className={`p-2 rounded-lg text-xs ${isDark ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-50 text-blue-700'}`}>
+                                <History className="w-3 h-3 inline mr-1" />
+                                Sudah diedit oleh PIC sebelumnya
                             </div>
                         )}
+
+                        <div className="space-y-3">
+                            <div>
+                                <FormInput
+                                    label="Contact Person"
+                                    name="venue_contact"
+                                    value={editForm.venue_contact}
+                                    onChange={(e) => setEditForm({ ...editForm, venue_contact: e.target.value })}
+                                    placeholder="Nama contact person"
+                                />
+                                {selectedSurvey.venue_contact && selectedSurvey.pic_venue_contact && (
+                                    <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                        Asli: {selectedSurvey.venue_contact}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <FormInput
+                                    label="Telepon"
+                                    name="venue_phone"
+                                    value={editForm.venue_phone}
+                                    onChange={(e) => setEditForm({ ...editForm, venue_phone: e.target.value })}
+                                    placeholder="Nomor telepon"
+                                />
+                            </div>
+
+                            <div>
+                                <FormSelect
+                                    label="Kategori"
+                                    name="category"
+                                    value={editForm.category}
+                                    onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                                    placeholder="-- Pilih Kategori --"
+                                    options={[
+                                        { value: 'commercial', label: 'Komersial' },
+                                        { value: 'non_commercial', label: 'Non-Komersial' },
+                                    ]}
+                                />
+                                {selectedSurvey.category && selectedSurvey.pic_category && (
+                                    <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                        Asli: {selectedSurvey.category === 'commercial' ? 'Komersial' : 'Non-Komersial'}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <FormInput
+                                    label="Kapasitas"
+                                    name="capacity_limit"
+                                    type="number"
+                                    value={editForm.capacity_limit}
+                                    onChange={(e) => setEditForm({ ...editForm, capacity_limit: e.target.value })}
+                                    placeholder="Kapasitas venue"
+                                />
+                                {selectedSurvey.capacity_limit && selectedSurvey.pic_capacity_limit && (
+                                    <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                        Asli: {selectedSurvey.capacity_limit}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <FormTextarea
+                                    label="Deskripsi"
+                                    name="description"
+                                    value={editForm.description}
+                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    rows={3}
+                                    placeholder="Deskripsi tambahan"
+                                />
+                                {selectedSurvey.description && selectedSurvey.pic_description && (
+                                    <p className={`text-xs mt-1 ${isDark ? 'text-emerald-500/50' : 'text-gray-400'}`}>
+                                        Asli: {selectedSurvey.description.substring(0, 50)}...
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button variant="ghost" onClick={() => setShowEditModal(false)}>
+                                Batal
+                            </Button>
+                            <Button 
+                                onClick={handleSaveEdit}
+                                disabled={isEditing}
+                            >
+                                {isEditing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Button>
+                        </div>
                     </div>
                 )}
             </Modal>
+
+            {/* Compare Modal - Agent vs PIC */}
+            <Modal
+                isOpen={showCompareModal}
+                onClose={() => setShowCompareModal(false)}
+                title="Bandingkan Versi Data"
+                size="lg"
+            >
+                {selectedSurvey && selectedSurvey.has_pic_edits && (
+                    <div className="space-y-4">
+                        <p className={`text-sm ${isDark ? 'text-emerald-500/60' : 'text-gray-500'}`}>
+                            Diedit oleh: <strong>{selectedSurvey.pic_edited_by}</strong> pada {selectedSurvey.pic_edited_at}
+                        </p>
+
+                        {/* Comparison Table */}
+                        <div className={`rounded-lg overflow-hidden border ${isDark ? 'border-emerald-900/30' : 'border-gray-200'}`}>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className={isDark ? 'bg-emerald-950/50' : 'bg-gray-50'}>
+                                        <th className={`px-3 py-2 text-left font-medium ${isDark ? 'text-emerald-400' : 'text-gray-700'}`}>Field</th>
+                                        <th className={`px-3 py-2 text-left font-medium ${isDark ? 'text-emerald-400' : 'text-gray-700'}`}>Versi Agent</th>
+                                        <th className={`px-3 py-2 text-left font-medium ${isDark ? 'text-blue-400' : 'text-blue-700'}`}>Versi PIC</th>
+                                    </tr>
+                                </thead>
+                                <tbody className={`divide-y ${isDark ? 'divide-emerald-900/30' : 'divide-gray-100'}`}>
+                                    {selectedSurvey.pic_venue_contact !== null && (
+                                        <tr className={selectedSurvey.venue_contact !== selectedSurvey.pic_venue_contact ? (isDark ? 'bg-amber-500/10' : 'bg-amber-50') : ''}>
+                                            <td className={`px-3 py-2 font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>Contact Person</td>
+                                            <td className={`px-3 py-2 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>{selectedSurvey.venue_contact || '-'}</td>
+                                            <td className={`px-3 py-2 ${selectedSurvey.venue_contact !== selectedSurvey.pic_venue_contact ? (isDark ? 'text-amber-300 font-medium' : 'text-amber-700 font-medium') : (isDark ? 'text-blue-300' : 'text-blue-700')}`}>{selectedSurvey.pic_venue_contact || '-'}</td>
+                                        </tr>
+                                    )}
+                                    {selectedSurvey.pic_venue_phone !== null && (
+                                        <tr className={selectedSurvey.venue_phone !== selectedSurvey.pic_venue_phone ? (isDark ? 'bg-amber-500/10' : 'bg-amber-50') : ''}>
+                                            <td className={`px-3 py-2 font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>Telepon</td>
+                                            <td className={`px-3 py-2 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>{selectedSurvey.venue_phone || '-'}</td>
+                                            <td className={`px-3 py-2 ${selectedSurvey.venue_phone !== selectedSurvey.pic_venue_phone ? (isDark ? 'text-amber-300 font-medium' : 'text-amber-700 font-medium') : (isDark ? 'text-blue-300' : 'text-blue-700')}`}>{selectedSurvey.pic_venue_phone || '-'}</td>
+                                        </tr>
+                                    )}
+                                    {selectedSurvey.pic_category !== null && (
+                                        <tr className={selectedSurvey.category !== selectedSurvey.pic_category ? (isDark ? 'bg-amber-500/10' : 'bg-amber-50') : ''}>
+                                            <td className={`px-3 py-2 font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>Kategori</td>
+                                            <td className={`px-3 py-2 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>{selectedSurvey.category === 'commercial' ? 'Komersial' : 'Non-Komersial'}</td>
+                                            <td className={`px-3 py-2 ${selectedSurvey.category !== selectedSurvey.pic_category ? (isDark ? 'text-amber-300 font-medium' : 'text-amber-700 font-medium') : (isDark ? 'text-blue-300' : 'text-blue-700')}`}>{selectedSurvey.pic_category === 'commercial' ? 'Komersial' : 'Non-Komersial'}</td>
+                                        </tr>
+                                    )}
+                                    {selectedSurvey.pic_capacity_limit !== null && (
+                                        <tr className={selectedSurvey.capacity_limit !== selectedSurvey.pic_capacity_limit ? (isDark ? 'bg-amber-500/10' : 'bg-amber-50') : ''}>
+                                            <td className={`px-3 py-2 font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>Kapasitas</td>
+                                            <td className={`px-3 py-2 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>{selectedSurvey.capacity_limit || '-'}</td>
+                                            <td className={`px-3 py-2 ${selectedSurvey.capacity_limit !== selectedSurvey.pic_capacity_limit ? (isDark ? 'text-amber-300 font-medium' : 'text-amber-700 font-medium') : (isDark ? 'text-blue-300' : 'text-blue-700')}`}>{selectedSurvey.pic_capacity_limit || '-'}</td>
+                                        </tr>
+                                    )}
+                                    {selectedSurvey.pic_description !== null && (
+                                        <tr className={selectedSurvey.description !== selectedSurvey.pic_description ? (isDark ? 'bg-amber-500/10' : 'bg-amber-50') : ''}>
+                                            <td className={`px-3 py-2 font-medium ${isDark ? 'text-emerald-100' : 'text-gray-900'}`}>Deskripsi</td>
+                                            <td className={`px-3 py-2 ${isDark ? 'text-emerald-300' : 'text-gray-700'}`}>{selectedSurvey.description || '-'}</td>
+                                            <td className={`px-3 py-2 ${selectedSurvey.description !== selectedSurvey.pic_description ? (isDark ? 'text-amber-300 font-medium' : 'text-amber-700 font-medium') : (isDark ? 'text-blue-300' : 'text-blue-700')}`}>{selectedSurvey.pic_description || '-'}</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className={`p-3 rounded-lg ${isDark ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}>
+                            <p className={`text-xs ${isDark ? 'text-amber-400' : 'text-amber-700'}`}>
+                                <strong>Kembalikan ke Versi Agent</strong> akan menghapus semua perubahan PIC dan menggunakan data asli dari agent.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-4">
+                            <Button variant="ghost" onClick={() => setShowCompareModal(false)}>
+                                Tutup
+                            </Button>
+                            <Button 
+                                variant="danger"
+                                onClick={handleRevertPicEdit}
+                                disabled={isReverting}
+                            >
+                                <History className="w-4 h-4" />
+                                {isReverting ? 'Mengembalikan...' : 'Kembalikan ke Versi Agent'}
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* Resolve Violation Confirmation */}
+            <ConfirmModal
+                isOpen={showResolveConfirm}
+                onClose={() => setShowResolveConfirm(false)}
+                onConfirm={executeSaveEdit}
+                title="Resolve Pelanggaran?"
+                message="Pelanggaran ini akan ditandai sebagai resolved setelah data diedit. Lanjutkan?"
+                confirmText="Ya, Resolve"
+                cancelText="Batal"
+                variant="warning"
+            />
+
+            {/* Reactivate Violation Confirmation - used by both edit and revert paths */}
+            <ConfirmModal
+                isOpen={showReactivateConfirm}
+                onClose={() => setShowReactivateConfirm(false)}
+                onConfirm={() => {
+                    // If edit modal is open, this is path 2 (edit back to violating)
+                    // Otherwise it's path 1 (revert)
+                    if (showEditModal) {
+                        executeSaveEdit();
+                    } else {
+                        executeRevertPicEdit();
+                    }
+                }}
+                title="Aktifkan Kembali Pelanggaran?"
+                message="Pelanggaran akan diaktifkan kembali. Lanjutkan?"
+                confirmText="Ya, Aktifkan"
+                cancelText="Batal"
+                variant="danger"
+            />
+
+            {/* Photo Lightbox */}
+            {selectedPhoto && (
+                <div 
+                    className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setSelectedPhoto(null)}
+                >
+                    <button
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+                        onClick={() => setSelectedPhoto(null)}
+                    >
+                        <XCircle className="w-6 h-6" />
+                    </button>
+                    <img 
+                        src={selectedPhoto} 
+                        alt="Foto Survey" 
+                        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
         </DashboardLayout>
     );
 }

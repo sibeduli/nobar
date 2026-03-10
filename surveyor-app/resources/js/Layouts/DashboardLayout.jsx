@@ -11,6 +11,7 @@ import {
     ClipboardList,
     FileCheck,
     AlertTriangle,
+    Briefcase,
     Map,
     MousePointerClick,
     Settings,
@@ -49,6 +50,7 @@ const navigation = [
         children: [
             { name: 'Semua Survey', href: '/surveys', icon: FileCheck },
             { name: 'Pelanggaran', href: '/surveys?tab=violations', icon: AlertTriangle },
+            { name: 'Penawaran', href: '/surveys?tab=leads', icon: Briefcase },
         ]
     },
     { name: 'Peta Venue', href: '/venues/map', icon: Map },
