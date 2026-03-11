@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Survey extends Model
 {
@@ -38,6 +39,7 @@ class Survey extends Model
         'pic_description',
         'pic_edited_by',
         'pic_edited_at',
+        'is_locked',
     ];
 
     protected $casts = [
@@ -46,6 +48,7 @@ class Survey extends Model
         'longitude' => 'decimal:8',
         'reviewed_at' => 'datetime',
         'pic_edited_at' => 'datetime',
+        'is_locked' => 'boolean',
     ];
 
     public function agent(): BelongsTo
@@ -71,6 +74,23 @@ class Survey extends Model
     public function actualVisitorsCategory(): BelongsTo
     {
         return $this->belongsTo(CapacityCategory::class, 'actual_visitors_category_id');
+    }
+
+    public function bill(): HasOne
+    {
+        return $this->hasOne(SurveyBill::class);
+    }
+
+    public function hasBill(): bool
+    {
+        return $this->bill()->exists();
+    }
+
+    public function canBeBilled(): bool
+    {
+        return $this->status === 'approved' 
+            && $this->report_type === 'violation_capacity'
+            && !$this->hasBill();
     }
 
     /**

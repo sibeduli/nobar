@@ -29,6 +29,7 @@ import {
     RefreshCw,
     Pencil,
     History,
+    Receipt,
 } from 'lucide-react';
 
 // Report type labels
@@ -1089,6 +1090,15 @@ export default function SurveysIndex({ surveys = [], stats = {}, violationStats 
                             <Button variant="ghost" onClick={() => setShowDetailModal(false)}>
                                 Tutup
                             </Button>
+                            {selectedSurvey.report_type === 'violation_capacity' && selectedSurvey.status === 'approved' && (
+                                <Button 
+                                    variant="secondary"
+                                    onClick={() => router.visit(`/sales?survey=${selectedSurvey.id}`)}
+                                >
+                                    <Receipt className="w-4 h-4" />
+                                    Lihat Tagihan
+                                </Button>
+                            )}
                             <Button 
                                 variant="secondary"
                                 onClick={() => handleOpenEdit(selectedSurvey)}

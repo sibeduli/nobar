@@ -71,6 +71,10 @@ Route::middleware('auth:pic')->group(function () {
 
     Route::get('/pic/activities', [App\Http\Controllers\PicController::class, 'activities'])->name('pic.activities');
 
+    // Sales / Billing
+    Route::get('/sales', [App\Http\Controllers\BillController::class, 'index'])->name('pic.sales');
+    Route::post('/surveys/{survey}/send-bill', [App\Http\Controllers\BillController::class, 'send'])->name('pic.bills.send');
+
     Route::get('/settings', [SettingsController::class, 'index'])->name('pic.settings');
     Route::put('/settings/profile', [SettingsController::class, 'updateProfile'])->name('pic.settings.profile');
     Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('pic.settings.password');

@@ -12,6 +12,7 @@ import {
     FileCheck,
     AlertTriangle,
     Briefcase,
+    Receipt,
     Map,
     MousePointerClick,
     Settings,
@@ -54,6 +55,7 @@ const navigation = [
         ]
     },
     { name: 'Peta Venue', href: '/venues/map', icon: Map },
+    { name: 'Sales', href: '/sales', icon: Receipt },
     { name: 'Aktivitas PIC', href: '/pic/activities', icon: MousePointerClick },
     { 
         name: 'Pengaturan', 
