@@ -409,4 +409,5 @@ class AgentController extends Controller
 
         return "{$typeLabel}: {$venueName}";
     }
+
 }

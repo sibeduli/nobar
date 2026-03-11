@@ -9,10 +9,9 @@ datasource db {
 model Merchant {
   id            String   @id @default(cuid())
   businessName  String
-  ownerName     String   // From Google account
-  email         String   // From Google account (not unique - one user can have multiple venues)
+  ownerName     String
+  email         String
   phone         String
-  contactPerson String?  // Contact person name for venue
   venueType     String
   capacity      Int
   provinsi      String
@@ -23,34 +22,35 @@ model Merchant {
   kodePos       String?
   latitude      Float?
   longitude     Float?
-  openingHour   String?  // e.g. "09:00"
-  closingHour   String?  // e.g. "22:00"
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  closingHour   String?
+  contactPerson String?
+  openingHour   String?
   license       License?
 }
 
 model License {
   id                String    @id @default(cuid())
-  venue             Merchant  @relation(fields: [venueId], references: [id], onDelete: Cascade)
   venueId           String    @unique
-  tier              Int       // 1, 2, 3, 4, or 5
-  price             Int       // amount in IDR
-  frozen            Boolean   @default(false) // true = "Dibekukan" by admin (e.g. guest limit violation)
-  frozenAt          DateTime? // when license was frozen
-  frozenReason      String?   // reason for freezing
-  paidAt            DateTime  @default(now()) // License only created on successful payment
-  midtransId        String?   // order_id from Midtrans
-  transactionId     String?   // transaction_id from Midtrans
-  paymentType       String?   // e.g. "credit_card", "bank_transfer", "gopay"
-  transactionStatus String?   // e.g. "capture", "settlement"
-  transactionTime   DateTime? // when payment was made
-  grossAmount       String?   // amount string from Midtrans
-  bank              String?   // bank name if bank transfer
-  vaNumber          String?   // VA number if bank transfer
-  cardType          String?   // card type if credit card
-  maskedCard        String?   // masked card number
+  tier              Int
+  price             Int
+  paidAt            DateTime  @default(now())
+  midtransId        String?
   createdAt         DateTime  @default(now())
+  bank              String?
+  cardType          String?
+  grossAmount       String?
+  maskedCard        String?
+  paymentType       String?
+  transactionId     String?
+  transactionStatus String?
+  transactionTime   DateTime?
+  vaNumber          String?
+  frozen            Boolean   @default(false)
+  frozenAt          DateTime?
+  frozenReason      String?
+  venue             Merchant  @relation(fields: [venueId], references: [id], onDelete: Cascade)
 }
 
 model User {
@@ -70,30 +70,30 @@ model User {
 
 model ActivityLog {
   id          String   @id @default(cuid())
-  user        User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
   userEmail   String
-  action      String   // e.g. "LOGIN", "LOGOUT", "VENUE_CREATE", "VENUE_UPDATE", "VENUE_DELETE", "LICENSE_CREATE", "PAYMENT_SUCCESS"
-  description String   // Human-readable description
-  metadata    Json?    // Additional data like venueId, licenseId, etc.
+  action      String
+  description String
+  metadata    Json?
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
 
   @@index([userEmail])
   @@index([createdAt])
 }
 
 model Ticket {
-  id          String          @id @default(cuid())
-  ticketNo    String          @unique // e.g. "TKT-20260213-001"
-  userEmail   String
-  subject     String
-  category    String          // e.g. "payment", "license", "technical", "other"
-  priority    String          @default("normal") // "low", "normal", "high", "urgent"
-  status      String          @default("open") // "open", "waiting_admin", "admin_replied", "waiting_user", "resolved", "closed"
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  messages    TicketMessage[]
+  id        String          @id @default(cuid())
+  ticketNo  String          @unique
+  userEmail String
+  subject   String
+  category  String
+  priority  String          @default("normal")
+  status    String          @default("open")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  messages  TicketMessage[]
 
   @@index([userEmail])
   @@index([status])
@@ -101,13 +101,292 @@ model Ticket {
 }
 
 model TicketMessage {
-  id        String   @id @default(cuid())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  ticketId  String
-  sender    String   // "user" or "admin"
+  id          String   @id @default(cuid())
+  ticketId    String
+  sender      String
   senderEmail String
-  message   String
-  createdAt DateTime @default(now())
+  message     String
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
+}
+
+model Company {
+  id            BigInt         @id @default(autoincrement())
+  name          String         @db.VarChar(255)
+  code          String         @unique(map: "companies_code_unique") @db.VarChar(255)
+  address       String?        @db.VarChar(255)
+  phone         String?        @db.VarChar(255)
+  email         String?        @db.VarChar(255)
+  is_active     Boolean        @default(true)
+  createdAt     DateTime?      @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime?      @updatedAt @map("updated_at") @db.Timestamp(0)
+  legal_name    String?        @db.VarChar(255)
+  npwp          String?        @db.VarChar(255)
+  business_type String?        @db.VarChar(255)
+  city          String?        @db.VarChar(255)
+  province      String?        @db.VarChar(255)
+  postal_code   String?        @db.VarChar(255)
+  website       String?        @db.VarChar(255)
+  description   String?
+  agents        Agent[]
+  pics          pics[]
+  survey_bills  survey_bills[]
+
+  @@map("companies")
+}
+
+model Agent {
+  id                  BigInt                @id @default(autoincrement())
+  companyId           BigInt                @map("company_id")
+  name                String                @db.VarChar(255)
+  phone               String                @unique(map: "agents_phone_unique") @db.VarChar(255)
+  email               String?               @db.VarChar(255)
+  password            String                @db.VarChar(255)
+  nik                 String?               @db.VarChar(255)
+  address             String?               @db.VarChar(255)
+  areas               Json?                 @db.Json
+  qrCode              String                @unique(map: "agents_qr_code_unique") @map("qr_code") @db.VarChar(255)
+  status              String                @default("active") @db.VarChar(255)
+  last_login_at       DateTime?             @db.Timestamp(0)
+  createdAt           DateTime?             @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime?             @updatedAt @map("updated_at") @db.Timestamp(0)
+  notes               String?
+  ktp_photo           String?               @db.VarChar(255)
+  agent_activity_logs agent_activity_logs[]
+  company             Company               @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agents_company_id_foreign")
+  surveys             surveys[]
+
+  @@index([companyId, status], map: "agents_company_id_status_index")
+  @@map("agents")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model agent_activity_logs {
+  id         BigInt    @id @default(autoincrement())
+  agent_id   BigInt
+  type       String    @db.VarChar(255)
+  ip_address String?   @db.VarChar(255)
+  user_agent String?   @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  agents     Agent     @relation(fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "agent_activity_logs_agent_id_foreign")
+}
+
+model cache {
+  key        String @id @db.VarChar(255)
+  value      String
+  expiration Int
+
+  @@index([expiration], map: "cache_expiration_index")
+}
+
+model cache_locks {
+  key        String @id @db.VarChar(255)
+  owner      String @db.VarChar(255)
+  expiration Int
+
+  @@index([expiration], map: "cache_locks_expiration_index")
+}
+
+model capacity_categories {
+  id                                                               BigInt    @id @default(autoincrement())
+  code                                                             String    @db.VarChar(255)
+  label                                                            String    @db.VarChar(255)
+  min_capacity                                                     Int
+  max_capacity                                                     Int?
+  price                                                            Decimal   @db.Decimal(15, 2)
+  sort_order                                                       Int       @default(0)
+  created_at                                                       DateTime? @db.Timestamp(0)
+  updated_at                                                       DateTime? @db.Timestamp(0)
+  surveys_surveys_actual_visitors_category_idTocapacity_categories surveys[] @relation("surveys_actual_visitors_category_idTocapacity_categories")
+  surveys_surveys_capacity_category_idTocapacity_categories        surveys[] @relation("surveys_capacity_category_idTocapacity_categories")
+  surveys_surveys_pic_capacity_category_idTocapacity_categories    surveys[] @relation("surveys_pic_capacity_category_idTocapacity_categories")
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement())
+  uuid       String   @unique(map: "failed_jobs_uuid_unique") @db.VarChar(255)
+  connection String
+  queue      String
+  payload    String
+  exception  String
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model job_batches {
+  id             String  @id @db.VarChar(255)
+  name           String  @db.VarChar(255)
+  total_jobs     Int
+  pending_jobs   Int
+  failed_jobs    Int
+  failed_job_ids String
+  options        String?
+  cancelled_at   Int?
+  created_at     Int
+  finished_at    Int?
+}
+
+model jobs {
+  id           BigInt @id @default(autoincrement())
+  queue        String @db.VarChar(255)
+  payload      String
+  attempts     Int    @db.SmallInt
+  reserved_at  Int?
+  available_at Int
+  created_at   Int
+
+  @@index([queue], map: "jobs_queue_index")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement())
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model password_reset_tokens {
+  email      String    @id @db.VarChar(255)
+  token      String    @db.VarChar(255)
+  created_at DateTime? @db.Timestamp(0)
+}
+
+model pic_activity_logs {
+  id          BigInt    @id @default(autoincrement())
+  pic_id      BigInt
+  type        String    @db.VarChar(255)
+  description String?   @db.VarChar(255)
+  target_type String?   @db.VarChar(255)
+  target_id   BigInt?
+  ip_address  String?   @db.VarChar(255)
+  user_agent  String?   @db.VarChar(255)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  pics        pics      @relation(fields: [pic_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pic_activity_logs_pic_id_foreign")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model pics {
+  id                BigInt              @id @default(autoincrement())
+  company_id        BigInt
+  name              String              @db.VarChar(255)
+  email             String              @unique(map: "pics_email_unique") @db.VarChar(255)
+  phone             String?             @db.VarChar(255)
+  password          String              @db.VarChar(255)
+  status            String              @default("pending") @db.VarChar(255)
+  email_verified_at DateTime?           @db.Timestamp(0)
+  approved_at       DateTime?           @db.Timestamp(0)
+  approved_by       String?             @db.VarChar(255)
+  remember_token    String?             @db.VarChar(100)
+  last_login_at     DateTime?           @db.Timestamp(0)
+  created_at        DateTime?           @db.Timestamp(0)
+  updated_at        DateTime?           @db.Timestamp(0)
+  pic_activity_logs pic_activity_logs[]
+  companies         Company             @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pics_company_id_foreign")
+  survey_bills      survey_bills[]
+  surveys           surveys[]
+}
+
+model sessions {
+  id            String  @id @db.VarChar(255)
+  user_id       BigInt?
+  ip_address    String? @db.VarChar(45)
+  user_agent    String?
+  payload       String
+  last_activity Int
+  pic_id        BigInt?
+  agent_id      BigInt?
+
+  @@index([agent_id], map: "sessions_agent_id_index")
+  @@index([last_activity], map: "sessions_last_activity_index")
+  @@index([pic_id], map: "sessions_pic_id_index")
+  @@index([user_id], map: "sessions_user_id_index")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model survey_bills {
+  id               BigInt    @id @default(autoincrement())
+  survey_id        BigInt    @unique(map: "survey_bills_survey_id_unique")
+  company_id       BigInt
+  bill_number      String    @unique(map: "survey_bills_bill_number_unique") @db.VarChar(255)
+  base_price       Decimal   @db.Decimal(15, 2)
+  markup           Decimal   @default(10000000) @db.Decimal(15, 2)
+  amount           Decimal   @db.Decimal(15, 2)
+  pic_commission   Decimal   @db.Decimal(15, 2)
+  status           String    @default("sent") @db.VarChar(255)
+  sent_at          DateTime? @db.Timestamp(0)
+  due_date         DateTime? @db.Date
+  paid_at          DateTime? @db.Timestamp(0)
+  merchant_name    String?   @db.VarChar(255)
+  merchant_address String?   @db.VarChar(255)
+  merchant_phone   String?   @db.VarChar(255)
+  notes            String?
+  created_by       BigInt?
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+  ppn              Decimal   @default(0) @db.Decimal(15, 2)
+  nett             Decimal   @default(0) @db.Decimal(15, 2)
+  companies        Company   @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "survey_bills_company_id_foreign")
+  pics             pics?     @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "survey_bills_created_by_foreign")
+  surveys          surveys   @relation(fields: [survey_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "survey_bills_survey_id_foreign")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model surveys {
+  id                                                                           BigInt               @id @default(autoincrement())
+  agent_id                                                                     BigInt
+  merchant_id                                                                  String?              @db.VarChar(255)
+  license_id                                                                   String?              @db.VarChar(255)
+  category                                                                     String               @db.VarChar(255)
+  report_type                                                                  String               @db.VarChar(255)
+  venue_name                                                                   String?              @db.VarChar(255)
+  venue_address                                                                String?              @db.VarChar(255)
+  venue_contact                                                                String?              @db.VarChar(255)
+  venue_phone                                                                  String?              @db.VarChar(255)
+  actual_visitors                                                              Int?
+  capacity_limit                                                               Int?
+  description                                                                  String?
+  photos                                                                       Json?                @db.Json
+  latitude                                                                     Decimal?             @db.Decimal(10, 8)
+  longitude                                                                    Decimal?             @db.Decimal(11, 8)
+  status                                                                       String               @default("pending") @db.VarChar(255)
+  admin_notes                                                                  String?
+  reviewed_at                                                                  DateTime?            @db.Timestamp(0)
+  reviewed_by                                                                  String?              @db.VarChar(255)
+  created_at                                                                   DateTime?            @db.Timestamp(0)
+  updated_at                                                                   DateTime?            @db.Timestamp(0)
+  pic_venue_contact                                                            String?              @db.VarChar(255)
+  pic_venue_phone                                                              String?              @db.VarChar(255)
+  pic_category                                                                 String?              @db.VarChar(255)
+  pic_capacity_limit                                                           Int?
+  pic_description                                                              String?
+  pic_edited_by                                                                BigInt?
+  pic_edited_at                                                                DateTime?            @db.Timestamp(0)
+  capacity_category_id                                                         BigInt?
+  pic_capacity_category_id                                                     BigInt?
+  actual_visitors_category_id                                                  BigInt?
+  is_locked                                                                    Boolean              @default(false)
+  survey_bills                                                                 survey_bills?
+  capacity_categories_surveys_actual_visitors_category_idTocapacity_categories capacity_categories? @relation("surveys_actual_visitors_category_idTocapacity_categories", fields: [actual_visitors_category_id], references: [id], onUpdate: NoAction, map: "surveys_actual_visitors_category_id_foreign")
+  agents                                                                       Agent                @relation(fields: [agent_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "surveys_agent_id_foreign")
+  capacity_categories_surveys_capacity_category_idTocapacity_categories        capacity_categories? @relation("surveys_capacity_category_idTocapacity_categories", fields: [capacity_category_id], references: [id], onUpdate: NoAction, map: "surveys_capacity_category_id_foreign")
+  capacity_categories_surveys_pic_capacity_category_idTocapacity_categories    capacity_categories? @relation("surveys_pic_capacity_category_idTocapacity_categories", fields: [pic_capacity_category_id], references: [id], onUpdate: NoAction, map: "surveys_pic_capacity_category_id_foreign")
+  pics                                                                         pics?                @relation(fields: [pic_edited_by], references: [id], onUpdate: NoAction, map: "surveys_pic_edited_by_foreign")
+
+  @@index([agent_id, status], map: "surveys_agent_id_status_index")
+  @@index([created_at], map: "surveys_created_at_index")
+  @@index([merchant_id], map: "surveys_merchant_id_index")
+  @@index([report_type], map: "surveys_report_type_index")
+}
+
+model users {
+  id                BigInt    @id @default(autoincrement())
+  name              String    @db.VarChar(255)
+  email             String    @unique(map: "users_email_unique") @db.VarChar(255)
+  email_verified_at DateTime? @db.Timestamp(0)
+  password          String    @db.VarChar(255)
+  remember_token    String?   @db.VarChar(100)
+  created_at        DateTime? @db.Timestamp(0)
+  updated_at        DateTime? @db.Timestamp(0)
 }
