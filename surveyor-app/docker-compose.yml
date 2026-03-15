@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: surveyor-app
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env.production
+    environment:
+      - APP_ENV=production
