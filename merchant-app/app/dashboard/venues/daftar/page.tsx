@@ -65,6 +65,7 @@ export default function DaftarVenuePage() {
     businessName: '',
     contactPerson: '',
     phone: '',
+    isCommercial: '',
     venueType: '',
     capacity: '',
     openingHour: '',
@@ -117,6 +118,10 @@ export default function DaftarVenuePage() {
     e.preventDefault();
     
     // Validate required select fields
+    if (!formData.isCommercial) {
+      showWarning('Silakan pilih sifat venue (Komersial/Non-Komersial)');
+      return;
+    }
     if (!formData.venueType) {
       showWarning('Silakan pilih jenis venue');
       return;
@@ -234,79 +239,139 @@ export default function DaftarVenuePage() {
           </CardContent>
         </Card>
 
-        {/* Section 2: Detail Venue */}
+        {/* Section 2: Tipe Venue */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Detail Venue</CardTitle>
-            <CardDescription>Informasi tentang tempat usaha</CardDescription>
+            <CardTitle className="text-lg">Tipe Venue</CardTitle>
+            <CardDescription>Apakah venue ini bersifat komersial?</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="venueType">Jenis Venue <span className="text-red-500">*</span></Label>
-                <Select value={formData.venueType} onValueChange={(v) => handleSelectChange('venueType', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih jenis venue" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cafe">Cafe/Warkop</SelectItem>
-                    <SelectItem value="restaurant">Restoran</SelectItem>
-                    <SelectItem value="bar">Bar</SelectItem>
-                    <SelectItem value="hotel">Hotel/Penginapan</SelectItem>
-                    <SelectItem value="sports_venue">Venue Olahraga</SelectItem>
-                    <SelectItem value="community">Balai Warga/Komunitas</SelectItem>
-                    <SelectItem value="other">Lainnya</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="capacity">Kapasitas Pengunjung <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={formData.capacity} 
-                  onValueChange={(v) => handleSelectChange('capacity', v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih kapasitas venue" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CAPACITY_TIERS.map((tier) => (
-                      <SelectItem key={tier.tier} value={tier.tier.toString()}>
-                        <span className="flex justify-between items-center gap-4">
-                          <span>{tier.label}</span>
-                          <span className="text-gray-500">({tier.priceLabel})</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="openingHour">Jam Buka (opsional)</Label>
-                <Input
-                  id="openingHour"
-                  name="openingHour"
-                  type="time"
-                  value={formData.openingHour}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="closingHour">Jam Tutup (opsional)</Label>
-                <Input
-                  id="closingHour"
-                  name="closingHour"
-                  type="time"
-                  value={formData.closingHour}
-                  onChange={handleChange}
-                />
-              </div>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="isCommercial">Sifat Venue <span className="text-red-500">*</span></Label>
+              <Select 
+                value={formData.isCommercial} 
+                onValueChange={(v) => {
+                  handleSelectChange('isCommercial', v);
+                  // Reset venue type and capacity when switching
+                  if (v === 'non_commercial') {
+                    setFormData(prev => ({ ...prev, venueType: 'community', capacity: '' }));
+                  } else {
+                    setFormData(prev => ({ ...prev, venueType: '', capacity: '' }));
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih sifat venue" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="commercial">Komersial (Cafe, Restoran, Bar, dll)</SelectItem>
+                  <SelectItem value="non_commercial">Non-Komersial (Balai Warga, Komunitas, dll)</SelectItem>
+                </SelectContent>
+              </Select>
+              {formData.isCommercial === 'commercial' && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Venue komersial memerlukan lisensi berbayar sesuai kapasitas
+                </p>
+              )}
+              {formData.isCommercial === 'non_commercial' && (
+                <p className="text-xs text-green-600 mt-1">
+                  Venue non-komersial mendapat lisensi gratis (perlu verifikasi)
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Section 3: Alamat */}
+        {/* Section 3: Detail Venue - Only show after isCommercial is selected */}
+        {formData.isCommercial && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Detail Venue</CardTitle>
+              <CardDescription>Informasi tentang tempat usaha</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="venueType">Jenis Venue <span className="text-red-500">*</span></Label>
+                  <Select value={formData.venueType} onValueChange={(v) => handleSelectChange('venueType', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih jenis venue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.isCommercial === 'commercial' ? (
+                        <>
+                          <SelectItem value="cafe">Cafe/Warkop</SelectItem>
+                          <SelectItem value="restaurant">Restoran</SelectItem>
+                          <SelectItem value="bar">Bar</SelectItem>
+                          <SelectItem value="hotel">Hotel/Penginapan</SelectItem>
+                          <SelectItem value="sports_venue">Venue Olahraga</SelectItem>
+                          <SelectItem value="other">Lainnya</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="community">Balai Warga/RT/RW</SelectItem>
+                          <SelectItem value="mosque">Masjid/Musholla</SelectItem>
+                          <SelectItem value="church">Gereja</SelectItem>
+                          <SelectItem value="school">Sekolah/Kampus</SelectItem>
+                          <SelectItem value="government">Kantor Pemerintah</SelectItem>
+                          <SelectItem value="other_non_commercial">Lainnya (Non-Komersial)</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="capacity">Kapasitas Pengunjung <span className="text-red-500">*</span></Label>
+                  <Select 
+                    value={formData.capacity} 
+                    onValueChange={(v) => handleSelectChange('capacity', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih kapasitas venue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CAPACITY_TIERS.map((tier) => (
+                        <SelectItem key={tier.tier} value={tier.tier.toString()}>
+                          <span className="flex justify-between items-center gap-4">
+                            <span>{tier.label}</span>
+                            {formData.isCommercial === 'commercial' && (
+                              <span className="text-gray-500">({tier.priceLabel})</span>
+                            )}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="openingHour">Jam Buka (opsional)</Label>
+                  <Input
+                    id="openingHour"
+                    name="openingHour"
+                    type="time"
+                    value={formData.openingHour}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="closingHour">Jam Tutup (opsional)</Label>
+                  <Input
+                    id="closingHour"
+                    name="closingHour"
+                    type="time"
+                    value={formData.closingHour}
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Section 4: Alamat - Only show after Detail Venue is filled */}
+        {formData.isCommercial && formData.venueType && formData.capacity && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Alamat Venue</CardTitle>
@@ -393,6 +458,7 @@ export default function DaftarVenuePage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Submit */}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
