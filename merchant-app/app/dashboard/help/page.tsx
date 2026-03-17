@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Mail, MessageCircle, AlertTriangle, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { CONTACT_EMAIL, CONTACT_WHATSAPP, CONTACT_WHATSAPP_LINK } from '@/lib/constants';
 
 export default function HelpPage() {
   return (
@@ -28,12 +29,12 @@ export default function HelpPage() {
           </CardHeader>
           <CardContent>
             <a
-              href="https://wa.me/6281234567890"
+              href={CONTACT_WHATSAPP_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline"
             >
-              +62 812-3456-7890
+              {CONTACT_WHATSAPP}
             </a>
           </CardContent>
         </Card>
@@ -52,10 +53,10 @@ export default function HelpPage() {
           </CardHeader>
           <CardContent>
             <a
-              href="mailto:nobar@tvri.go.id"
+              href={`mailto:${CONTACT_EMAIL}`}
               className="text-blue-600 hover:underline"
             >
-              nobar@tvri.go.id
+              {CONTACT_EMAIL}
             </a>
           </CardContent>
         </Card>
@@ -103,7 +104,7 @@ export default function HelpPage() {
           </div>
 
           <div>
-            <h4 className="font-medium text-gray-900">Berapa biaya lisensi nobar?</h4>
+            <h4 className="font-medium text-gray-900">Berapa biaya lisensi?</h4>
             <p className="text-sm text-gray-500 mt-1">
               Biaya lisensi berdasarkan kapasitas venue:<br />
               • Tier 1 (≤50 orang): Rp 5.000.000<br />

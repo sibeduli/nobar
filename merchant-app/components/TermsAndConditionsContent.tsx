@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
+import { APP_FULL_TITLE, APP_ORGANIZATION, CONTACT_EMAIL, CONTACT_WHATSAPP } from '@/lib/constants';
 
 export default function TermsAndConditionsContent() {
   return (
@@ -19,10 +20,10 @@ export default function TermsAndConditionsContent() {
       </div>
 
       <h2 className="text-lg font-bold text-gray-900 mt-0">Syarat dan Ketentuan Umum</h2>
-      <p className="text-sm text-gray-500 mb-4">Nonton Bareng Bola Gembira Piala Dunia 2026</p>
+      <p className="text-sm text-gray-500 mb-4">{APP_FULL_TITLE}</p>
 
       <p>
-        Selamat datang di aplikasi resmi pendaftaran lisensi Nonton Bareng Bola Gembira Piala Dunia 2026 oleh TVRI. Berikut adalah syarat dan ketentuan umum bagi pelaku usaha atau publik lainnya yang ingin melakukan pendaftaran Nonton Bareng Bola Gembira Piala Dunia 2026.
+        Selamat datang di aplikasi resmi pendaftaran lisensi {APP_FULL_TITLE} oleh {APP_ORGANIZATION}. Berikut adalah syarat dan ketentuan umum bagi pelaku usaha atau publik lainnya yang ingin melakukan pendaftaran {APP_FULL_TITLE}.
       </p>
 
       <h3 className="text-base font-semibold text-gray-900 mt-6">Ketentuan Umum</h3>
@@ -82,8 +83,8 @@ export default function TermsAndConditionsContent() {
         Untuk informasi lebih lanjut, silakan hubungi:
       </p>
       <ul>
-        <li><strong>Email:</strong> nobar@tvri.go.id</li>
-        <li><strong>WhatsApp:</strong> +62 812-3456-7890</li>
+        <li><strong>Email:</strong> {CONTACT_EMAIL}</li>
+        <li><strong>WhatsApp:</strong> {CONTACT_WHATSAPP}</li>
       </ul>
 
       <p className="mt-6 text-sm text-gray-500">

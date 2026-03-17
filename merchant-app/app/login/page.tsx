@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TermsAndConditionsModal from '@/components/TermsAndConditionsModal';
+import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -31,8 +32,8 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img src="/TVRI-logo.svg" alt="TVRI" className="h-16 w-auto mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">TVRI Nobar</h1>
-          <p className="text-gray-500 mt-1">Lisensi Resmi Piala Dunia 2026</p>
+          <h1 className="text-2xl font-bold text-gray-900">{APP_NAME}</h1>
+          <p className="text-gray-500 mt-1">{APP_TAGLINE}</p>
         </div>
 
         <Card>
@@ -66,7 +67,7 @@ export default function LoginPage() {
             <CardDescription>
               {mode === 'login'
                 ? 'Masuk untuk mengelola venue Anda'
-                : 'Daftar untuk mendapatkan lisensi nobar'}
+                : 'Daftar untuk mendapatkan lisensi'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

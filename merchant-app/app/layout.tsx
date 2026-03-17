@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nobar - Daftar Venue",
-  description: "Daftar venue untuk lisensi nobar Piala Dunia 2026",
+  title: "Nonton Bareng Bola Gembira - Daftar Venue",
+  description: "Daftar venue untuk lisensi Nonton Bareng Bola Gembira Piala Dunia 2026",
   icons: {
     icon: "/favicon-TVRI.png",
     apple: "/favicon-TVRI.png",

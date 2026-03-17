@@ -7,6 +7,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { APP_NAME_SHORT } from '@/lib/constants';
 import {
   LayoutDashboard,
   Store,
@@ -258,7 +259,7 @@ export default function Sidebar({ children }: SidebarProps) {
         </Button>
         <div className="flex items-center gap-2">
           <img src="/TVRI-logo.svg" alt="TVRI" className="h-8 w-auto" />
-          <span className="font-semibold text-gray-900">Nobar</span>
+          <span className="font-semibold text-gray-900">{APP_NAME_SHORT}</span>
         </div>
       </div>
 
@@ -292,7 +293,7 @@ export default function Sidebar({ children }: SidebarProps) {
             <div className="flex items-center gap-3">
               <img src="/TVRI-logo.svg" alt="TVRI" className="h-10 w-auto flex-shrink-0" />
               <div>
-                <h1 className="font-bold text-gray-900">Nobar</h1>
+                <h1 className="font-bold text-gray-900">{APP_NAME_SHORT}</h1>
                 <p className="text-xs text-gray-500">Merchant Licensing Portal</p>
               </div>
             </div>
@@ -350,7 +351,7 @@ export default function Sidebar({ children }: SidebarProps) {
               <img src="/TVRI-logo.svg" alt="TVRI" className="h-10 w-auto flex-shrink-0" />
               {!collapsed && (
                 <div>
-                  <h1 className="font-bold text-gray-900">Nobar</h1>
+                  <h1 className="font-bold text-gray-900">{APP_NAME_SHORT}</h1>
                   <p className="text-xs text-gray-500">Merchant Licensing Portal</p>
                 </div>
               )}
