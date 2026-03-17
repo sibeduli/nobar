@@ -6,6 +6,9 @@ export const APP_FULL_TITLE = `${APP_NAME} ${APP_EVENT}`;
 export const APP_ORGANIZATION = 'TVRI';
 export const APP_TAGLINE = 'Lisensi Resmi Piala Dunia 2026';
 
+// Terms and Conditions
+export const TNC_LAST_UPDATED = 'Maret 2026';
+
 // Contact information
 export const CONTACT_EMAIL = 'nontonbarengbolagembira@tvri.go.id';
 export const CONTACT_WHATSAPP = '+62 812-3456-7890';

@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { UserCircle, Store, CreditCard, ArrowRight } from 'lucide-react';
+import { APP_NAME } from '@/lib/constants';
 
 interface UserProfile {
   phone: string | null;
@@ -111,7 +112,7 @@ export default function WelcomeModal() {
             </svg>
           </div>
           <DialogTitle className="text-xl">
-            Selamat Datang di TVRI Nobar!
+            Selamat Datang di {APP_NAME}!
           </DialogTitle>
           <DialogDescription className="text-base">
             Portal lisensi resmi untuk penayangan Piala Dunia 2026

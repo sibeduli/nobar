@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, CheckCircle, Clock, CreditCard, Building2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/components/AlertModal';
+import { APP_NAME_SHORT, CONTACT_EMAIL } from '@/lib/constants';
 
 interface License {
   id: string;
@@ -242,7 +243,7 @@ export default function InvoicePage() {
                   className="h-10 w-auto"
                 />
                 <div>
-                  <h2 className="font-bold text-gray-900">Nobar</h2>
+                  <h2 className="font-bold text-gray-900">{APP_NAME_SHORT}</h2>
                   <p className="text-xs text-gray-500">Merchant Licensing Portal</p>
                 </div>
               </div>
@@ -423,8 +424,8 @@ export default function InvoicePage() {
 
           {/* Footer */}
           <div className="text-center text-sm text-gray-500 pt-4 border-t">
-            <p>Terima kasih telah menggunakan layanan TVRI Nobar</p>
-            <p>Untuk pertanyaan, hubungi support@tvrinobar.id</p>
+            <p>Terima kasih telah menggunakan layanan {APP_NAME_SHORT}</p>
+            <p>Untuk pertanyaan, hubungi {CONTACT_EMAIL}</p>
           </div>
         </CardContent>
       </Card>

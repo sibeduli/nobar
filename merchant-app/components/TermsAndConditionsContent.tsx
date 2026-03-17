@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
-import { APP_FULL_TITLE, APP_ORGANIZATION, CONTACT_EMAIL, CONTACT_WHATSAPP } from '@/lib/constants';
+import { APP_FULL_TITLE, APP_ORGANIZATION, CONTACT_EMAIL, CONTACT_WHATSAPP, TNC_LAST_UPDATED } from '@/lib/constants';
 
 export default function TermsAndConditionsContent() {
   return (
@@ -20,13 +20,13 @@ export default function TermsAndConditionsContent() {
       </div>
 
       <h2 className="text-lg font-bold text-gray-900 mt-0">Syarat dan Ketentuan Umum</h2>
-      <p className="text-sm text-gray-500 mb-4">{APP_FULL_TITLE}</p>
+      <p className="text-sm text-gray-500 mb-4">{APP_FULL_TITLE} — Terakhir diperbarui: {TNC_LAST_UPDATED}</p>
 
       <p>
-        Selamat datang di aplikasi resmi pendaftaran lisensi {APP_FULL_TITLE} oleh {APP_ORGANIZATION}. Berikut adalah syarat dan ketentuan umum bagi pelaku usaha atau publik lainnya yang ingin melakukan pendaftaran {APP_FULL_TITLE}.
+        Selamat datang di aplikasi resmi pendaftaran lisensi <strong>{APP_FULL_TITLE}</strong> oleh {APP_ORGANIZATION}. Berikut adalah syarat dan ketentuan umum bagi pelaku usaha atau publik lainnya yang ingin melakukan pendaftaran <strong>{APP_FULL_TITLE}</strong>.
       </p>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Ketentuan Umum</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">1. Ketentuan Umum</h3>
       <ol>
         <li>Pendaftar wajib memiliki izin usaha atau izin penyelenggaraan kegiatan yang sah sesuai ketentuan yang berlaku.</li>
         <li>Pendaftar bertanggung jawab penuh atas keamanan, ketertiban, dan kenyamanan pengunjung selama acara berlangsung.</li>
@@ -36,7 +36,7 @@ export default function TermsAndConditionsContent() {
         <li>TVRI berhak mencabut lisensi jika terjadi pelanggaran terhadap ketentuan yang berlaku.</li>
       </ol>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Lisensi Non-Komersial</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">2. Lisensi Non-Komersial</h3>
       <p>Ketentuan khusus untuk lisensi non-komersial:</p>
       <ol>
         <li>Hanya berlaku untuk Usaha Mikro dan Kecil sesuai definisi peraturan perundang-undangan yang berlaku.</li>
@@ -47,7 +47,7 @@ export default function TermsAndConditionsContent() {
         <li>Kapasitas venue maksimal sesuai dengan tier lisensi yang dipilih.</li>
       </ol>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Lisensi Komersial</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">3. Lisensi Komersial</h3>
       <p>Ketentuan khusus untuk lisensi komersial:</p>
       <ol>
         <li>Berlaku untuk Usaha Menengah dan Besar sesuai definisi peraturan perundang-undangan yang berlaku.</li>
@@ -58,7 +58,7 @@ export default function TermsAndConditionsContent() {
         <li>Kapasitas venue sesuai dengan tier lisensi yang dipilih.</li>
       </ol>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Larangan Umum</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">4. Larangan Umum</h3>
       <ol>
         <li>Dilarang menayangkan siaran di luar jadwal yang telah ditentukan.</li>
         <li>Dilarang mengubah, memodifikasi, atau menambahkan konten pada siaran.</li>
@@ -67,7 +67,7 @@ export default function TermsAndConditionsContent() {
         <li>Dilarang melakukan kegiatan yang melanggar hukum atau ketertiban umum.</li>
       </ol>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Sanksi Pelanggaran</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">5. Sanksi Pelanggaran</h3>
       <p>
         Pelanggaran terhadap syarat dan ketentuan ini dapat mengakibatkan:
       </p>
@@ -78,7 +78,7 @@ export default function TermsAndConditionsContent() {
         <li>Larangan pendaftaran lisensi di masa mendatang.</li>
       </ol>
 
-      <h3 className="text-base font-semibold text-gray-900 mt-6">Kontak</h3>
+      <h3 className="text-base font-semibold text-gray-900 mt-6">6. Kontak</h3>
       <p>
         Untuk informasi lebih lanjut, silakan hubungi:
       </p>

@@ -13,6 +13,7 @@ import {
 } from '@react-pdf/renderer';
 import path from 'path';
 import fs from 'fs';
+import { APP_NAME_SHORT, CONTACT_EMAIL } from '@/lib/constants';
 
 // Get TVRI logo as base64 for PDF embedding (PNG format for react-pdf compatibility)
 const getLogoBase64 = () => {
@@ -301,7 +302,7 @@ const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
               <Image src={logoBase64} style={{ width: 40, height: 24 }} />
             )}
             <View>
-              <Text style={styles.logo}>Nobar</Text>
+              <Text style={styles.logo}>{APP_NAME_SHORT}</Text>
               <Text style={styles.logoSubtitle}>Merchant Licensing Portal</Text>
             </View>
           </View>
@@ -432,8 +433,8 @@ const InvoiceDocument = ({ license, userProfile }: InvoiceDocumentProps) => {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Terima kasih telah menggunakan layanan Nobar</Text>
-          <Text style={styles.footerText}>Untuk pertanyaan, hubungi support@tvrinobar.id</Text>
+          <Text style={styles.footerText}>Terima kasih telah menggunakan layanan {APP_NAME_SHORT}</Text>
+          <Text style={styles.footerText}>Untuk pertanyaan, hubungi {CONTACT_EMAIL}</Text>
         </View>
       </Page>
     </Document>
