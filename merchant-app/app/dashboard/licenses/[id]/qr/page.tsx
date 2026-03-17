@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Download, CheckCircle, Store } from 'lucide-react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
+import { APP_NAME_SHORT, APP_TAGLINE } from '@/lib/constants';
 
 interface LicenseDetail {
   id: string;
@@ -148,19 +149,19 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
       ctx.fillStyle = '#1c316b';
       ctx.font = 'bold 16px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('Nobar', 20 + logoWidth + 8, 40);
+      ctx.fillText(APP_NAME_SHORT, 20 + logoWidth + 8, 40);
       ctx.fillStyle = '#6b7280';
       ctx.font = '10px Arial';
-      ctx.fillText('Lisensi Resmi', 20 + logoWidth + 8, 54);
+      ctx.fillText(APP_TAGLINE, 20 + logoWidth + 8, 54);
     } else {
       // Fallback text logo
       ctx.fillStyle = '#1c316b';
       ctx.font = 'bold 16px Arial';
       ctx.textAlign = 'left';
-      ctx.fillText('TVRI Nobar', 20, 40);
+      ctx.fillText(APP_NAME_SHORT, 20, 40);
       ctx.fillStyle = '#6b7280';
       ctx.font = '10px Arial';
-      ctx.fillText('Lisensi Resmi', 20, 54);
+      ctx.fillText(APP_TAGLINE, 20, 54);
     }
 
     // Licensed badge
@@ -317,8 +318,8 @@ export default function LicenseQRPage({ params }: { params: Promise<{ id: string
             <div className="flex items-center gap-2">
               <img src="/TVRI-logo.svg" alt="TVRI" className="h-9 w-auto" />
               <div>
-                <p className="font-bold text-[#1c316b] text-sm">Nobar</p>
-                <p className="text-xs text-gray-500">Lisensi Resmi</p>
+                <p className="font-bold text-[#1c316b] text-sm">{APP_NAME_SHORT}</p>
+                <p className="text-xs text-gray-500">{APP_TAGLINE}</p>
               </div>
             </div>
             <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
