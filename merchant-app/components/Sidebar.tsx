@@ -24,6 +24,7 @@ import {
   QrCode,
   Activity,
   MessageSquare,
+  ScrollText,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -82,6 +83,11 @@ const menuItems: MenuItem[] = [
     label: 'Bantuan',
     href: '/dashboard/help',
     icon: <HelpCircle className="w-5 h-5" />,
+  },
+  {
+    label: 'Syarat & Ketentuan',
+    href: '/dashboard/terms',
+    icon: <ScrollText className="w-5 h-5" />,
   },
 ];
 

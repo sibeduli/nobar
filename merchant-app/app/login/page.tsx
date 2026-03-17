@@ -4,11 +4,24 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import TermsAndConditionsModal from '@/components/TermsAndConditionsModal';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const handleGoogleAuth = () => {
+    if (mode === 'signup') {
+      // Show T&C modal for signup
+      setShowTermsModal(true);
+    } else {
+      // Direct login
+      signIn('google', { callbackUrl: '/dashboard' });
+    }
+  };
+
+  const handleAcceptTerms = () => {
+    // User accepted T&C, proceed with signup
     signIn('google', { callbackUrl: '/dashboard' });
   };
 
@@ -110,6 +123,12 @@ export default function LoginPage() {
           Dengan melanjutkan, Anda menyetujui Syarat & Ketentuan dan Kebijakan Privasi kami.
         </p>
       </div>
+
+      <TermsAndConditionsModal
+        open={showTermsModal}
+        onOpenChange={setShowTermsModal}
+        onAccept={handleAcceptTerms}
+      />
     </div>
   );
 }
