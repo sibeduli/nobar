@@ -5,11 +5,14 @@ import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TermsAndConditionsModal from '@/components/TermsAndConditionsModal';
+import ShareModal from '@/components/ShareModal';
 import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
+import { Share2 } from 'lucide-react';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleGoogleAuth = () => {
     if (mode === 'signup') {
@@ -123,12 +126,28 @@ export default function LoginPage() {
         <p className="text-center text-xs text-gray-400 mt-6">
           Dengan melanjutkan, Anda menyetujui Syarat & Ketentuan dan Kebijakan Privasi kami.
         </p>
+
+        {/* Share Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowShareModal(true)}
+          className="mt-4 mx-auto flex items-center gap-2 text-gray-500 hover:text-gray-700"
+        >
+          <Share2 className="w-4 h-4" />
+          Bagikan halaman ini
+        </Button>
       </div>
 
       <TermsAndConditionsModal
         open={showTermsModal}
         onOpenChange={setShowTermsModal}
         onAccept={handleAcceptTerms}
+      />
+
+      <ShareModal
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
       />
     </div>
   );
